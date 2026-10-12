@@ -1,0 +1,9 @@
+{
+  "name": "fac_agent",
+  "version": "0.2.0",
+  "title": "Factorio Agent API",
+  "author": "Timo Stretz",
+  "description": "RCON friendly action API (remote interface) for LLM agents. Used by factorio-agent-mcp.",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 2.0.0"]
+}

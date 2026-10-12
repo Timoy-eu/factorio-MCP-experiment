@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "llamacpp/qwen",
+  "provider": {
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama-server (lokal)",
+      "options": { "baseURL": "http://127.0.0.1:8080/v1" },
+      "models": {
+        "qwen": {
+          "name": "Qwen 27B (lokal)",
+          "limit": { "context": 65536, "output": 8192 }
+        }
+      }
+    }
+  },
+  "mcp": {
+    "factorio": {
+      "type": "local",
+      "command": ["/home/DU/factorio-agent-mcp/.venv/bin/factorio-agent-mcp"],
+      "environment": {
+        "FACTORIO_RCON_HOST": "127.0.0.1",
+        "FACTORIO_RCON_PORT": "27015",
+        "FACTORIO_RCON_PASSWORD": "geheim",
+        "FACTORIO_MCP_DATA_DIR": "/home/DU/factorio-agent-data",
+        "FACTORIO_MCP_RENDER_DIR": "/home/DU/factorio-agent-data/renders"
+      },
+      "enabled": true,
+      "timeout": 15000
+    }
+  },
+  "instructions": ["AGENTS.md"]
+}
