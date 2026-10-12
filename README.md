@@ -1,33 +1,33 @@
 # factorio-agent-mcp
 
-MCP-Server, mit dem auch kleine lokale Modelle Factorio 2.0 spielen können. Statt 70 Low-Level-Tools
-gibt es 50 Aktionen auf hoher Ebene (13 Kernaktionen plus FLE-Parität, Karte, Blueprints). Der Server übernimmt Planung, Orientierung und Verifikation,
-das Modell muss nur noch die Tools aufrufen. Hintergrund und Quellen: `FINDINGS.md`.
+MCP server that lets even small local models play Factorio 2.0. Instead of 70 low-level tools it offers
+50 high-level actions (13 core actions plus FLE parity, maps, blueprints). The server handles planning, orientation and verification;
+the model only has to call the tools. Background and sources: `FINDINGS.md`.
 
 ```
-Modell <-> MCP-Client <-stdio-> factorio-agent-mcp (Python) <-RCON-> Factorio + Mod fac_agent (Lua)
+Model <-> MCP client <-stdio-> factorio-agent-mcp (Python) <-RCON-> Factorio + mod fac_agent (Lua)
 ```
 
-## Wichtig: Teststand
+## Important: test status
 
-Getestet ist alles gegen einen Mock der Factorio-API (64 Tests, `pytest`): Python, RCON-Protokoll
-(inklusive mehrteiliger Antworten), echter Mod-Lua-Code, Orientierungssuche, Rücklesen, rekursives
-Craften. Gegen ein echtes Factorio 2.0 wurde noch nichts gelaufen. Rechne mit kleinen Anpassungen
-an einzelnen API-Aufrufen (siehe "Bekannte Unsicherheiten").
+Everything is tested against a mock of the Factorio API (`pytest`): Python, the RCON protocol
+(including multi-part replies), the real mod Lua code, orientation search, read-back, recursive
+crafting. Nothing has been run against a real Factorio 2.0 yet. Expect small adjustments
+to individual API calls (see "Known uncertainties").
 
 ## Installation
 
-Schritt für Schritt mit OpenCode unter Linux: **`INSTALL_OPENCODE.md`** (mit Beispielen in `examples/`).
+Step by step with OpenCode on Linux: **`INSTALL_OPENCODE.md`** (with examples in `examples/`).
 
-Kurzfassung:
+Short version:
 
-1. Mod installieren: `dist/fac_agent_0.2.0.zip` in den Factorio-Ordner `mods/` legen
-   (oder den Ordner `mod/fac_agent` kopieren). Der Mod braucht Factorio 2.0.
-2. Server mit RCON starten:
-   `factorio --start-server meine-karte.zip --rcon-port 27015 --rcon-password geheim`
-   (Hinweis: Befehle per `/silent-command` deaktivieren Errungenschaften.)
-3. MCP-Server installieren: `pip install -e .` (Python 3.10+, Paket `mcp`).
-4. Im MCP-Client eintragen (Beispiel `mcp.example.json`):
+1. Install the mod: put `dist/fac_agent_0.2.0.zip` into the Factorio `mods/` folder
+   (or copy the folder `mod/fac_agent`). The mod requires Factorio 2.0.
+2. Start a server with RCON:
+   `factorio --start-server my-map.zip --rcon-port 27015 --rcon-password secret`
+   (Note: commands via `/silent-command` disable achievements.)
+3. Install the MCP server: `pip install -e .` (Python 3.10+, package `mcp`).
+4. Add it to your MCP client (example `mcp.example.json`):
 
 ```json
 {
@@ -37,131 +37,131 @@ Kurzfassung:
       "env": {
         "FACTORIO_RCON_HOST": "127.0.0.1",
         "FACTORIO_RCON_PORT": "27015",
-        "FACTORIO_RCON_PASSWORD": "geheim"
+        "FACTORIO_RCON_PASSWORD": "secret"
       }
     }
   }
 }
 ```
 
-Das rohe `run_lua`-Tool ist enthalten. Seine Beschreibung sagt dem Modell, dass es nur im absoluten Notfall benutzt werden darf, wenn kein anderes Tool reicht. Mit `FACTORIO_MCP_DISABLE_LUA=1` wird es entfernt.
+The raw `run_lua` tool is included. Its description tells the model to use it only as a last resort, when no other tool can do the job. `FACTORIO_MCP_DISABLE_LUA=1` removes it.
 
 ## Tools
 
-| Tool | Zweck |
+| Tool | Purpose |
 |---|---|
-| `status` | Position, Inventar, Gebäude mit Status, empfohlene nächste Schritte |
-| `look` | Umgebung scannen (Erz, Bäume, Felsen, Wasser, eigene Gebäude, Gegner) |
-| `find` | nächstes Erz, Baum, Fels, Wasser oder Gebäude |
-| `gather` | von Hand abbauen (Holz, Stein, Kohle, Eisen, Kupfer), Laufweg automatisch |
-| `craft` | von Hand herstellen inklusive Zwischenprodukten, `preview` zeigt das Rezept |
-| `build` | Gebäude setzen, Richtung `auto` sucht eine funktionierende, Ausweichplatz bei Blockade |
-| `rotate` | Gebäude drehen, Ergebnis wird zurückgelesen (Assembler werden neu erzeugt) |
-| `build_miner` | Bohrer auf Erz, der direkt in einen Ofen liefert, Seite wird automatisch gesucht |
-| `fuel` | Brennstoff einfüllen (eine Stelle oder alle Brenner in 30 Feldern) |
-| `collect` | fertige Platten und Ziegel aus Öfen und Maschinen holen |
-| `insert` | Items in ein Gebäude stecken |
-| `set_recipe` | Assembler-Rezept setzen |
-| `research` | Forschung auflisten oder einreihen |
+| `status` | position, inventory, buildings with status, recommended next steps |
+| `look` | scan the surroundings (ore, trees, rocks, water, own buildings, enemies) |
+| `find` | nearest ore, tree, rock, water or building |
+| `gather` | mine by hand (wood, stone, coal, iron, copper), walks there automatically |
+| `craft` | hand-craft including intermediate products, `preview` shows the recipe |
+| `build` | place a building; direction `auto` takes the first one that fits, falls back to a free spot if blocked |
+| `rotate` | rotate a building, the result is read back (assemblers are recreated) |
+| `build_miner` | drill on ore that feeds a furnace directly, the side is found automatically |
+| `fuel` | add fuel (one building or all burners within 30 tiles) |
+| `collect` | take finished plates and bricks out of furnaces and machines |
+| `insert` | put items into a building |
+| `set_recipe` | set an assembler recipe |
+| `research` | list or queue research |
 
-### Erweiterte Tools (FLE-Parität und mehr)
+### Extended tools (FLE parity and more)
 
-| Tool | Zweck | FLE-Entsprechung |
+| Tool | Purpose | FLE equivalent |
 |---|---|---|
-| `can_place` | prüft Platz, nennt Blocker und nächsten freien Ort | `can_place_entity` |
-| `nearest_buildable` | nächste freie Fläche, optional auf Erz | `nearest_buildable` |
-| `build_next_to` | direkt neben ein Gebäude bauen (Seite, Abstand) | `place_entity_next_to` |
-| `pickup` | Gebäude aufnehmen | `pickup_entity` |
-| `move_entity` | Gebäude verschieben (mit Rückfall bei Fehler) | `shift_entity` |
-| `extract` | Items aus Gebäude nehmen | `extract_item` |
-| `inventory` | eigenes Inventar oder das eines Gebäudes | `inspect_inventory` |
-| `inspect` | Details: Richtung, Status, Rezept, Inventare, Ausgabeziel, Strom | `get_entity` |
-| `list_entities` | Gebäude in der Nähe plus zusammenhängende Band-, Rohr- und Stromnetze | `get_entities` |
-| `resource_patch` | Größe, Menge, Mittelpunkt, Bounding Box eines Erzfelds | `get_resource_patch` |
-| `move_to` | zu einer Position gehen | `move_to` |
-| `connect` | Band, Rohr oder Strommasten verlegen (A* um Hindernisse), `dry_run` zählt Teile | `connect_entities`, `get_connection_amount` |
-| `research_info` | Fortschritt und fehlende Forschungspakete | `get_research_progress` |
-| `score` | Produktionsstatistik | `score` |
-| `launch_rocket` | Rakete starten | `launch_rocket` |
-| `say`, `set_game_speed` | Chat-Nachricht, Spielgeschwindigkeit | `send_message`, `sleep` (Ersatz) |
-| `craft`, `gather`, `build`, `rotate`, `insert`, `set_recipe`, `research`, `find`, `look` | siehe oben | `craft_item`, `harvest_resource`, `place_entity`, `rotate_entity`, `insert_item`, `set_entity_recipe`, `set_research`, `nearest`, `print` |
+| `can_place` | checks space, names blockers and the nearest free spot | `can_place_entity` |
+| `nearest_buildable` | nearest free area, optionally on ore | `nearest_buildable` |
+| `build_next_to` | build right next to a building (side, spacing) | `place_entity_next_to` |
+| `pickup` | pick up a building | `pickup_entity` |
+| `move_entity` | move a building (rolls back on failure) | `shift_entity` |
+| `extract` | take items out of a building | `extract_item` |
+| `inventory` | own inventory or that of a building | `inspect_inventory` |
+| `inspect` | details: direction, status, recipe, inventories, output target, power | `get_entity` |
+| `list_entities` | nearby buildings plus connected belt, pipe and power networks | `get_entities` |
+| `resource_patch` | size, amount, center, bounding box of an ore patch | `get_resource_patch` |
+| `move_to` | go to a position | `move_to` |
+| `connect` | lay belts, pipes or power poles (A* around obstacles), `dry_run` counts the pieces | `connect_entities`, `get_connection_amount` |
+| `research_info` | progress and missing science packs | `get_research_progress` |
+| `score` | production statistics | `score` |
+| `launch_rocket` | launch the rocket | `launch_rocket` |
+| `say`, `set_game_speed` | chat message, game speed | `send_message`, `sleep` (replacement) |
+| `craft`, `gather`, `build`, `rotate`, `insert`, `set_recipe`, `research`, `find`, `look` | see above | `craft_item`, `harvest_resource`, `place_entity`, `rotate_entity`, `insert_item`, `set_entity_recipe`, `set_research`, `nearest`, `print` |
 
-Nicht übernommen: das Schreiben von Python-Code durch das Modell (FLE-REPL). Stattdessen gibt es
-feste Tools, `run_lua` als letzter Ausweg.
+Not adopted: having the model write Python code (FLE REPL). Instead there are fixed tools,
+with `run_lua` as a last resort.
 
-### Selbsttest
+### Self-test
 
-`selftest` prüft in einem freien Sandbox-Bereich die Annahmen des Mods über die Factorio-API und räumt danach auf.
-Beim ersten Lauf in echtem Factorio ausführen und die `FAIL`-Zeilen melden. Ausführlich in `INSTALL_OPENCODE.md`.
+`selftest` checks the mod's assumptions about the Factorio API in a free sandbox area and cleans up afterwards.
+Run it on the first start in real Factorio and report the `FAIL` lines. Details in `INSTALL_OPENCODE.md`.
 
-### Spielanleitung für das Modell
+### Game guide for the model
 
-Der Server liefert beim Verbinden kurze `instructions` mit (Arbeitsweise, Regeln). Das Tool `guide`
-enthält das ausführliche Wissen: Arbeitsmethode, Frühspiel, Bänder und Inserter, Strom, Automatisierung,
-Fehlersuche und Tool-Überblick (`guide topic=belts` usw.). Manche lokale Clients ignorieren `instructions`,
-deshalb verweist auch `status` im Text darauf und das Modell kann `guide` selbst aufrufen. Den Inhalt
-passt du in `src/factorio_agent_mcp/guide.py` an. Für ein lokales Modell lohnt es sich zusätzlich, die
-`INSTRUCTIONS` in den System-Prompt des Clients zu kopieren.
+On connect the server sends short `instructions` (working method, rules). The `guide` tool
+holds the detailed knowledge: working method, early game, belts and inserters, power, automation,
+debugging and a tool overview (`guide topic=belts` etc.). Some local clients ignore `instructions`,
+so `status` also points to it and the model can call `guide` itself. You can edit the content
+in `src/factorio_agent_mcp/guide.py`. For a local model it also helps to copy the
+`INSTRUCTIONS` into the client's system prompt.
 
-### Chat und Batch
+### Chat and batch
 
-| Tool | Zweck |
+| Tool | Purpose |
 |---|---|
-| `say` | Nachricht als `[Bot]` im Spiel-Chat (hellblau) |
-| `read_chat` | liest neue Chat-Zeilen, die Spieler im Spiel getippt haben, so kann der Mensch dem Bot Anweisungen geben |
-| `batch` | mehrere Tools in einem Aufruf (`[{"tool":"build","args":{...}}, ...]`), stoppt beim ersten Fehler, höchstens 25 Aktionen |
+| `say` | message as `[Bot]` in the game chat (light blue) |
+| `read_chat` | reads new chat lines that players typed in the game, so the human can give the bot instructions |
+| `batch` | several tools in one call (`[{"tool":"build","args":{...}}, ...]`), stops at the first error, at most 25 actions |
 
-Erfolgreiche Aktionen (bauen, verlegen, craften, forschen, Blueprint setzen, ...) meldet der Bot automatisch kurz
-im Spiel-Chat. `FACTORIO_MCP_CHAT=0` schaltet das ab.
+The bot briefly announces successful actions (building, laying, crafting, research, placing blueprints, ...)
+in the game chat. `FACTORIO_MCP_CHAT=0` turns this off.
 
-### Karten
+### Maps
 
-| Tool | Zweck |
+| Tool | Purpose |
 |---|---|
-| `map` | ASCII-Karte für das Modell, beliebige Fläche zwischen zwei Ecken (max. 100x60), Bänder als Pfeile `^ > v <`, Maschinen als Buchstaben, Erz `i c k s`, `t` Baum, `~` Wasser, `@` du. `layers` filtert (`belts,pipes,power,machines,ore,trees,water,enemies`) |
-| `render_map` | realistisches SVG für den **Menschen** (Gelände, Erzdichte, Bäume, Maschinen mit Statusring, Bänder mit Laufrichtung, Rohre, Masten mit Kabeln, Legende). Speichert nach `renders/` und startet einen Live-Viewer auf `http://127.0.0.1:8765/` (folgt dem Agenten, Zoom, freie Fläche). `FACTORIO_MCP_VIEWER_PORT=0` schaltet den Viewer ab |
+| `map` | ASCII map for the model, any area between two corners (max. 100x60), belts as arrows `^ > v <`, machines as letters, ore `i c k s`, `t` tree, `~` water, `@` you. `layers` filters (`belts,pipes,power,machines,ore,trees,water,enemies`) |
+| `render_map` | realistic SVG for the **human** (terrain, ore density, trees, machines with status ring, belts with direction, pipes, poles with wires, legend). Saves to `renders/` and starts a live viewer at `http://127.0.0.1:8765/` (follows the agent, zoom, free area). `FACTORIO_MCP_VIEWER_PORT=0` turns the viewer off |
 
-### Items und Maschinen beobachten
+### Watching items and machines
 
-| Tool | Zweck |
+| Tool | Purpose |
 |---|---|
-| `belt_contents` | was liegt auf den Bändern einer Fläche (Items, Füllgrad, leere Stücke), mit Hinweis auf leere oder gestaute Bänder |
-| `trace_item` | legt ein Item (am besten Holz) auf ein Band und verfolgt es: Laufzeit, Strecke, "STUCK" mit Ort, oder "hat das Band verlassen". Beweist, dass ein Band verbunden ist und richtig herum läuft |
-| `measure_flow` | misst über N Sekunden Spielzeit eine Maschine (Crafts pro Minute, Anteil Arbeitszeit) oder ein Band (mittlere Last); mit `item` die Produktion der ganzen Fabrik pro Minute |
-| `machine_stats` | beobachtet alle Maschinen im Umkreis, zeigt Arbeitsanteil und Rate pro Maschine und eine Diagnose (kein Brennstoff, kein Strom, fehlender Input, blockierter Ausgang) |
+| `belt_contents` | what lies on the belts in an area (items, fill level, empty pieces), with a hint about empty or backed-up belts |
+| `trace_item` | puts an item (wood is best) on a belt and follows it: travel time, distance, "STUCK" with location, or "left the belt". Proves that a belt is connected and runs the right way |
+| `measure_flow` | measures a machine (crafts per minute, share of working time) or a belt (average load) over N seconds of game time; with `item` the production of the whole factory per minute |
+| `machine_stats` | observes all machines in a radius, shows working share and rate per machine and a diagnosis (no fuel, no power, missing input, blocked output) |
 
-Die Messung läuft über wiederholte Abfragen (`sample`, `trace_probe`) von Python aus, der Mod braucht
-dafür keinen Tick-Handler. Raten werden aus Spiel-Ticks berechnet, nicht aus Echtzeit. Der Durchsatz eines
-Bands ist eine Schätzung (mittlere Last), keine exakte Zählung. Gegen echtes Factorio noch ungeprüft:
-`LuaTransportLine.insert_at_back`, `get_item_count` auf Bandlinien und `products_finished`.
+Measuring works through repeated queries (`sample`, `trace_probe`) from Python; the mod needs
+no tick handler for it. Rates are computed from game ticks, not real time. The throughput of a
+belt is an estimate (average load), not an exact count. Not yet checked against real Factorio:
+`LuaTransportLine.insert_at_back`, `get_item_count` on belt lines and `products_finished`.
 
-### Zusammenarbeit Modell und Mensch
+### Model and human working together
 
-| Tool | Zweck |
+| Tool | Purpose |
 |---|---|
-| `blueprint_save` | Bereich als Blueprint speichern (Datei `factorio-data/blueprints/<name>.json`, von Hand editierbar) |
-| `blueprint_list`, `blueprint_show`, `blueprint_note`, `blueprint_delete` | verwalten, als ASCII ansehen (auch gedreht), Notizen und Status `draft/tested` pflegen |
-| `blueprint_place` | mit Drehung 0/90/180/270 bauen, `dry_run` prüft Items und freie Plätze, Fehler werden einzeln gemeldet |
-| `notes` | persistentes Notizbuch (Ziele, Koordinaten, Lektionen), überlebt Kontextverlust |
-| `overview` | Anzahl aller Gebäude und alles, was nicht läuft (kein Brennstoff, kein Strom, ...) |
-| `checkpoint` | Spielstand speichern, den der Mensch später laden kann |
+| `blueprint_save` | save an area as a blueprint (file `factorio-data/blueprints/<name>.json`, editable by hand) |
+| `blueprint_list`, `blueprint_show`, `blueprint_note`, `blueprint_delete` | manage, view as ASCII (also rotated), maintain notes and status `draft/tested` |
+| `blueprint_place` | build with rotation 0/90/180/270, `dry_run` checks items and free space, failures are reported one by one |
+| `notes` | persistent notebook (goals, coordinates, lessons), survives context loss |
+| `overview` | count of all buildings and everything that is not running (no fuel, no power, ...) |
+| `checkpoint` | save the game so the human can load it later |
 
-Blueprints sind absichtlich nicht vorgefertigt. Das Modell baut etwas, testet es, speichert es,
-und ihr verbessert es gemeinsam über Notizen und Status. Der Ordner liegt über
-`FACTORIO_MCP_DATA_DIR` (Standard `factorio-data`).
+Blueprints are deliberately not pre-made. The model builds something, tests it, saves it,
+and you improve it together through notes and status. The folder is set via
+`FACTORIO_MCP_DATA_DIR` (default `factorio-data`).
 
-Antworten sind kurze Texte mit Handlungsvorschlag im Fehlerfall, zum Beispiel
+Replies are short texts with a suggested action on errors, for example
 `ERR missing: missing 4 iron-plate | try: smelt iron-ore in a furnace (...)`.
 
-## Designentscheidungen für kleine Modelle
+## Design decisions for small models
 
-- Wenige Tools, klare Namen, kurze Beschreibungen.
-- Richtungen löst der Server (`auto`), jede Platzierung und Drehung wird zurückgelesen.
-- `status` enthält eine regelbasierte Planung (`src/factorio_agent_mcp/planner.py`), das
-  Modell muss keine Build-Order im Kopf haben.
-- Fehler nennen Ursache und nächsten Schritt statt nur "failed".
-- Bewegung (Teleport) und Abbau (sofort) sind bewusst vereinfacht. Das ist kein "ehrliches"
-  Spielen. Wer das ändern will, passt `move_near` und `gather` in `mod/fac_agent/control.lua` an.
+- Few tools, clear names, short descriptions.
+- The server solves directions (`auto`), every placement and rotation is read back.
+- `status` contains rule-based planning (`src/factorio_agent_mcp/planner.py`), so the
+  model does not need to keep a build order in mind.
+- Errors name the cause and the next step instead of just "failed".
+- Movement (teleport) and mining (instant) are deliberately simplified. This is not "honest"
+  play. To change that, adapt `move_near` and `gather` in `mod/fac_agent/control.lua`.
 
 ## Tests
 
@@ -170,22 +170,22 @@ pip install -e ".[test]"
 pytest
 ```
 
-`tests/mock_factorio.lua` ist eine kleine Fake-Welt (Kollisionen, Inventare, Rezepte, Bohrer-Ausgabe).
-Sie prüft die Logik des Mods, aber nicht das Verhalten der echten Engine.
+`tests/mock_factorio.lua` is a small fake world (collisions, inventories, recipes, drill output).
+It checks the mod's logic, but not the behavior of the real engine.
 
-## Bekannte Unsicherheiten (bei erstem Lauf in Factorio prüfen)
+## Known uncertainties (check on the first run in Factorio)
 
-- `LuaEntity.supports_direction`, `drop_target`, `get_output_inventory` und
-  `defines.inventory.crafter_input` sind aus der 2.0-Doku und aus den Referenz-Repos abgeleitet,
-  nicht live geprüft.
-- Der Charakter wird per Skript erzeugt (`create_entity`) und per Teleport bewegt.
-  Ob ein Skript-Charakter in allen Fällen minen und Inventar nutzen kann, zeigt erst der Praxistest.
-- `connect` (Router), `snapshot`, `belt_neighbours`, `get_max_wire_distance`, Offshore-Pumpen-Platzierung und `game.server_save` sind nur gegen den Mock getestet.
-- Der Boundary-Befehl für mehrteilige RCON-Antworten stammt aus phiresky/factorio-mcp
-  (dort gegen echtes Factorio benutzt), hier aber nur gegen einen Fake-Server getestet.
+- `LuaEntity.supports_direction`, `drop_target`, `get_output_inventory` and
+  `defines.inventory.crafter_input` are derived from the 2.0 docs and the reference repos,
+  not checked live.
+- The character is created by script (`create_entity`) and moved by teleport.
+  Whether a script character can mine and use its inventory in all cases will only show in practice.
+- `connect` (router), `snapshot`, `belt_neighbours`, `get_max_wire_distance`, offshore pump placement and `game.server_save` are only tested against the mock.
+- The boundary command for multi-part RCON replies comes from phiresky/factorio-mcp
+  (used against real Factorio there), but is only tested against a fake server here.
 
-## Ausbauideen
+## Ideas for later
 
-Züge (Gleise, Bahnhöfe, Fahrpläne), Öl und Chemie, Verteidigung, Ereignismeldungen vom Mod
-(Angriff, Forschung fertig), Batch-Aufrufe, Import echter Blueprint-Strings, asynchrone Jobs mit `*_status` für längere Aktionen (Muster aus dem
-Companion-Repo), ehrliches Laufen mit Pfadfindung.
+Trains (rails, stations, schedules), oil and chemistry, defense, event messages from the mod
+(attack, research finished), importing real blueprint strings, async jobs with `*_status` for longer actions (pattern from the
+companion repo), honest walking with pathfinding. Optimization ideas for Qwen3.8: `docs/PLAN_QWEN38.md`.

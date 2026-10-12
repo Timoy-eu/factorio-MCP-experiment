@@ -1,4 +1,4 @@
-"""MCP server: a dozen high level Factorio tools for small local models.
+"""MCP server: high level Factorio tools for small local models.
 
 Environment:
   FACTORIO_RCON_HOST (default 127.0.0.1)  FACTORIO_RCON_PORT (default 27015)
@@ -129,7 +129,7 @@ def craft(item: str, count: int = 1, preview: bool = False) -> str:
 @mcp.tool()
 @narrated("builds {entity} at ({x:g}, {y:g})")
 def build(entity: str, x: float, y: float, direction: str = "auto") -> str:
-    """Place a building from your inventory. direction: auto (default, a working one is found), north, east, south, west. If the spot is blocked the nearest free spot is used. The reply states the real position and direction."""
+    """Place a building from your inventory. direction: auto (default, the first one that fits), north, east, south, west. Give inserters and belts an explicit direction. If the spot is blocked the nearest free spot is used. The reply states the real position and direction."""
     return run(lambda g: render.build_text(
         g.call("build", entity.strip().lower(), float(x), float(y), direction_name(direction), 2)))
 
@@ -233,7 +233,7 @@ def extract(x: float, y: float, item: str, count: int = 10) -> str:
 
 @mcp.tool()
 def inventory(x: float | None = None, y: float | None = None) -> str:
-    """Your inventory, or without x,y all contents of the building at x,y (fuel, input, output, chest)."""
+    """Without x,y: your inventory. With x,y: all contents of the building there (fuel, input, output, chest)."""
     return run(lambda g: render.inv_view_text(g.call("inventory", None if x is None else _num(x), None if y is None else _num(y))))
 
 
@@ -268,7 +268,7 @@ def move_to(x: float, y: float) -> str:
 @narrated("lays {kind} from ({x1:g}, {y1:g}) to ({x2:g}, {y2:g})", lambda a: a["dry_run"])
 def connect(kind: str, x1: float, y1: float, x2: float, y2: float, entity: str = "",
             end_direction: str = "", dry_run: bool = False) -> str:
-    """Lay belts, pipes or power poles from (x1,y1) to (x2,y2). kind = belt | pipe | power. Belts and pipes are routed around obstacles; end_direction sets the facing of the last belt. dry_run=true only counts the pieces needed (like FLE's get_connection_amount)."""
+    """Lay belts, pipes or power poles from (x1,y1) to (x2,y2). kind = belt | pipe | power. Belts and pipes are routed around obstacles; end_direction sets the facing of the last belt. dry_run=true only counts the pieces needed."""
     return run(lambda g: render.connect_text(g.call("connect", kind.strip().lower(), _num(x1), _num(y1), _num(x2), _num(y2),
                                                     entity.strip().lower() or None, direction_name(end_direction) if end_direction else None, dry_run)))
 

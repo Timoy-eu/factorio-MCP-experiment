@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Startet einen Factorio-Headless-Server mit RCON (Linux).
-# Anpassen: FACTORIO_DIR, SAVE, RCON_PASSWORD.
+# Starts a Factorio headless server with RCON (Linux).
+# Adjust: FACTORIO_DIR, SAVE, RCON_PASSWORD.
 set -euo pipefail
 FACTORIO_DIR="${FACTORIO_DIR:-$HOME/factorio}"
 SAVE="${SAVE:-$FACTORIO_DIR/saves/agent.zip}"
 RCON_PORT="${RCON_PORT:-27015}"
-RCON_PASSWORD="${RCON_PASSWORD:-geheim}"
+RCON_PASSWORD="${RCON_PASSWORD:-secret}"
 
 cd "$FACTORIO_DIR"
 [ -f "$SAVE" ] || ./bin/x64/factorio --create "$SAVE"

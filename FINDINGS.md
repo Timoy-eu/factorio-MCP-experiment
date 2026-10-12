@@ -1,52 +1,52 @@
-# Erkenntnisse aus den Referenz-Repos
+# Findings from the reference repos
 
-Analysiert wurden (alle geklont, Stand Oktober 2026): Factorio Learning Environment (FLE, MIT),
-lveillard/factorio-ai-companion (MIT), thedemon117/ai-player-v3 (MIT laut README),
-phiresky/factorio-mcp (ISC laut package.json), JackHopkins/claude-code-plays-factorio (nur Prompt).
-Es wurde kein Code kopiert, nur Muster übernommen und neu geschrieben.
+Analyzed (all cloned, as of October 2026): Factorio Learning Environment (FLE, MIT),
+lveillard/factorio-ai-companion (MIT), thedemon117/ai-player-v3 (MIT according to its README),
+phiresky/factorio-mcp (ISC according to package.json), JackHopkins/claude-code-plays-factorio (prompt only).
+No code was copied; only patterns were adopted and rewritten.
 
-## 1. RCON-Anbindung (phiresky/factorio-mcp)
+## 1. RCON connection (phiresky/factorio-mcp)
 
-- Factorio ignoriert den Valve-Trick "leeres RESPONSE_VALUE-Paket spiegeln". Für mehrteilige
-  Antworten muss nach dem eigentlichen Befehl ein echter Folgebefehl (`rcon.print("")`) als
-  Grenze geschickt werden. Alles bis zur Antwort auf die Grenze gehört zur ersten Antwort.
-- Lua-Argumente müssen sauber escaped werden (Tagged-Template-Ansatz), sonst bricht
-  Spielername/Itemname mit Anführungszeichen den Befehl.
-- Ein RCON-Socket ist nicht thread-sicher: alle Aufrufe hinter einem Lock serialisieren
-  (ai-player-v3 macht das ebenso).
-- Kritisch: `/silent-command` mit Riesen-Lua pro Aufruf stößt an Paketgrenzen. Besser ein
-  kleines Mod mit `remote.add_interface` und kurzen Aufrufen (`remote.call(...)`), wie es die
-  Companion-Variante mit `/fac_api` macht.
+- Factorio ignores the Valve trick "mirror an empty RESPONSE_VALUE packet". For multi-part
+  replies, a real follow-up command (`rcon.print("")`) has to be sent after the actual command as a
+  boundary. Everything up to the reply to the boundary belongs to the first reply.
+- Lua arguments must be escaped properly (tagged-template approach), otherwise a player name
+  or item name with quotes breaks the command.
+- An RCON socket is not thread-safe: serialize all calls behind a lock
+  (ai-player-v3 does the same).
+- Critical: `/silent-command` with huge Lua per call runs into packet limits. Better a
+  small mod with `remote.add_interface` and short calls (`remote.call(...)`), as the
+  companion variant does with `/fac_api`.
 
-## 2. Rotation und Platzierung (Ursache der FLE-Probleme)
+## 2. Rotation and placement (cause of the FLE problems)
 
-- FLE rechnet intern zwischen eigener Direction-Enum, 8er-Richtungen (Factorio 1.x) und
-  16er-Richtungen (Factorio 2.0: 0, 4, 8, 12) um. In `place_entity/server.lua` stehen noch
-  Kommentare wie "0 -> 4" aus der 1.x-Zeit neben Mappings, die inzwischen Identität sind.
-  Diese Mischung ist eine plausible Fehlerquelle (meine Einschätzung, nicht bestätigt).
-- Assembler lassen sich in 2.0 ohne Fluid-Rezept nicht per `rotate()` drehen. FLE löst das mit
-  Zerstören und Neuerzeugen (Rezept, Inventar, Gesundheit sichern). Das Muster ist nötig.
-- `set_recipe` kann die Richtung verändern. Danach Richtung erneut erzwingen und zurücklesen.
-- FLE prüft nach dem Drehen, ob `entity.direction` wirklich dem Ziel entspricht, und wirft sonst
-  einen Fehler. Dieses Rücklesen ist das wichtigste robuste Muster.
+- FLE converts internally between its own direction enum, 8 directions (Factorio 1.x) and
+  16 directions (Factorio 2.0: 0, 4, 8, 12). `place_entity/server.lua` still contains
+  comments like "0 -> 4" from the 1.x era next to mappings that are now identity.
+  This mix is a plausible source of errors (my assessment, not confirmed).
+- In 2.0, assemblers without a fluid recipe cannot be turned with `rotate()`. FLE solves this by
+  destroying and recreating them (saving recipe, inventory, health). The pattern is necessary.
+- `set_recipe` can change the direction. Afterwards force the direction again and read it back.
+- After rotating, FLE checks whether `entity.direction` really matches the target and raises
+  an error otherwise. This read-back is the most important robust pattern.
 
-## 3. Orientierung lösen lassen statt vom Modell raten (Companion)
+## 3. Let the server solve orientation instead of the model guessing (companion)
 
-- Der Schritt `pick_orientation` probiert alle vier Seiten durch, prüft pro Seite mit
-  `can_place_entity` (Hauptobjekt und Nachbar) und nimmt die erste gültige. Das Modell muss
-  keine Richtung angeben. Genau das braucht ein kleines lokales Modell.
-- `find_patch` prüft zusätzlich, ob der Bohrer-Footprint wirklich auf dem Erz liegt.
-- `ensure_item` beschafft fehlende Materialien automatisch (rekursives Craften/Sammeln).
+- The `pick_orientation` step tries all four sides, checks each side with
+  `can_place_entity` (main object and neighbor) and takes the first valid one. The model does not
+  have to give a direction. That is exactly what a small local model needs.
+- `find_patch` additionally checks whether the drill footprint really lies on the ore.
+- `ensure_item` obtains missing materials automatically (recursive crafting/gathering).
 
-## 4. Tool-Zuschnitt für kleine Modelle
+## 4. Tool design for small models
 
-- Companion bietet 70 Tools. Für kleine Modelle viel zu viel. FLE verlangt Python-Code vom
-  Modell, ebenfalls zu viel.
-- Gut übernehmbar: asynchrone Jobs mit `*_status`-Abfrage, begrenzte Welt-Snapshots
-  (`world_observe`), Blueprint-Tools, eine Hilfe-Funktion.
-- Eigener Ansatz: etwa 12 Tools auf hoher Ebene, kompakte Textausgaben, Fehlermeldungen mit
-  Handlungsvorschlag, `status` liefert zusätzlich einen empfohlenen nächsten Schritt.
+- Companion offers 70 tools. Far too many for small models. FLE requires the model to write Python code,
+  also too much.
+- Worth adopting: async jobs with a `*_status` query, bounded world snapshots
+  (`world_observe`), blueprint tools, a help function.
+- Own approach: about 12 high-level tools, compact text output, error messages with a
+  suggested action, `status` additionally returns a recommended next step.
 
-## 5. Lizenzen
+## 5. Licenses
 
-Alle verwendeten Quellen sind permissiv (MIT/ISC). Trotzdem wurde nur das Muster übernommen.
+All sources used are permissive (MIT/ISC). Even so, only the patterns were adopted.

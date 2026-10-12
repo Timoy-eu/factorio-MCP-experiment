@@ -268,7 +268,7 @@ def test_guide_topics():
     full = server.guide()
     for word in ("EARLY GAME", "POWER", "BELTS", "AUTOMATION", "DEBUGGING", "TOOL OVERVIEW"):
         assert word in full
-    assert server.guide("quatsch").startswith("unknown topic")
+    assert server.guide("nonsense").startswith("unknown topic")
     # every tool named in the guide really exists
     import re
     names = {t for t in re.findall(r"\b([a-z_]{4,})\b", server.guide("tools"))}
