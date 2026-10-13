@@ -20,6 +20,9 @@ factorio-agent-eval = "factorio_agent_mcp.evaluation:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+factorio_agent_mcp = ["data/*.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

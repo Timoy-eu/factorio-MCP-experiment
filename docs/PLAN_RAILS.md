@@ -4,6 +4,37 @@ As of 2026-10-13. Goal: the model can lay a working rail line between two points
 add stations and signals, and run a train, with the same reliability rules as the other tools
 (server does the geometry, every placement is read back, clear errors with copyable `try:` calls).
 
+## Status (2026-10-13)
+
+| Phase | Status |
+|---|---|
+| 0 API spike | done against a real Factorio 2.0.77 server, findings below |
+| 4 Display | done: ASCII layer `rails`, SVG with curves from the learned table, signals, stops, trains |
+| 1 Calibration | done: `tools/calibrate_rails.py` learns the table from the game (24 pieces, reproducible), `tools/gen_rail_table.py` makes `rail_table.lua` |
+| 2 Router | done, in Lua inside the mod (`scripts/rails.lua`) instead of Python: exact `can_place_entity`, no RCON round trips |
+| 3 Tools | partly: `connect kind=rail` and `rail_end` done; `build_station`, `build_signals`, `build_train`, `train_schedule` open |
+| 5 Guide, planner, eval | guide topic `rails` done; planner and eval scenario S6 open |
+
+Deviations from the plan: the router lives in the mod, and it also removes trees and rocks in the way (cost per tree,
+`keep_trees=true` turns that off). ASCII glyphs differ from the plan because `=`, `s` and `B` were taken: `|` `-` `/` `\` rails, `!` signal,
+`?` chain signal, `Z` train stop, `M` locomotive, `w` wagon.
+
+## Findings of the API spike (real game, 2.0.77)
+
+- Items: `straight-rail` needs 1 `rail`, `half-diagonal-rail` 2, `curved-rail-a` and `curved-rail-b` 3 each.
+- `create_entity` snaps position and direction itself (a straight rail with direction 1 becomes direction 0), so always read
+  `entity.position` and `entity.direction` back. Direction values are 0..15 (north = 0, clockwise).
+- Connectivity: `entity.get_rail_end(defines.rail_direction.front|back)` returns a `LuaRailEnd`. `location` has `position`, `direction`,
+  `rail_layer`. `move_forward(defines.rail_connection_direction.left|straight|right)` only moves along rails that exist and returns
+  `false` otherwise; `rail` is the piece it landed on. That is the connectivity check used by the tools.
+- Learned geometry: every end of every piece has exactly one `straight`, one `left` and one `right` continuation, and the way back
+  is always listed (`tests/test_rails.py` checks both). `curved-rail-a` joins orthogonal pieces, `curved-rail-b` diagonal ones, a
+  straight piece can be followed by a half-diagonal one through a curve pair.
+- `can_place_entity` with `build_check_type.ghost_place` does not ignore trees, so trees are found with `find_entities_filtered`
+  and cut one by one (`entity.mine{inventory=...}`).
+- Performance: a 150 tile line searches and builds in about 2 s, a 250 tile U-turn in about 5 s (the game is blocked meanwhile),
+  a failed search up to about 5 s at the node limit (40000).
+
 ## Why curves are the hard part
 
 Rails in Factorio 2.0 are not tile pieces like belts:

@@ -291,9 +291,12 @@ local function connect_power(entity, x1, y1, x2, y2, dry_run)
   }
 end
 
-function M.connect(kind, x1, y1, x2, y2, entity, end_direction, dry_run)
+function M.connect(kind, x1, y1, x2, y2, entity, end_direction, dry_run, keep_trees)
+  if kind == "rail" then
+    return require("scripts.rails").connect(x1, y1, x2, y2, end_direction, dry_run, keep_trees)
+  end
   if not DEFAULT_ENTITY[kind] then
-    return fail("bad_kind", "kind must be belt, pipe or power", { kind = kind })
+    return fail("bad_kind", "kind must be belt, pipe, power or rail", { kind = kind })
   end
   entity = (entity and entity ~= "") and entity or DEFAULT_ENTITY[kind]
   if end_direction ~= nil and end_direction ~= "" and not DIRS[end_direction] then

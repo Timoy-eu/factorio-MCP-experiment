@@ -23,7 +23,7 @@ Step by step with OpenCode on Linux: **`INSTALL_OPENCODE.md`** (with examples in
 
 Short version:
 
-1. Install the mod: put `dist/fac_agent_0.2.0.zip` into the Factorio `mods/` folder
+1. Install the mod: put `dist/fac_agent_0.3.0.zip` into the Factorio `mods/` folder
    (or copy the folder `mod/fac_agent`). The mod requires Factorio 2.0.
 2. Start a server with RCON:
    `factorio --start-server my-map.zip --rcon-port 27015 --rcon-password secret`
@@ -81,7 +81,8 @@ The raw `run_lua` tool is included. Its description tells the model to use it on
 | `list_entities` | nearby buildings plus connected belt, pipe and power networks | `get_entities` |
 | `resource_patch` | size, amount, center, bounding box of an ore patch | `get_resource_patch` |
 | `move_to` | go to a position | `move_to` |
-| `connect` | lay belts, pipes or power poles (A* around obstacles), `dry_run` counts the pieces | `connect_entities`, `get_connection_amount` |
+| `connect` | lay belts, pipes, power poles or **rails** (A* around obstacles), `dry_run` counts the pieces. `kind=rail` routes straight, diagonal and curved pieces, continues an open rail end, removes trees in the way (`keep_trees=true` avoids that) and lets the game verify the connection | `connect_entities`, `get_connection_amount` |
+| `rail_end` | open rail ends near a point: where a line stops and which way it points (start of the next `connect kind=rail`) | |
 | `research_info` | progress and missing science packs | `get_research_progress` |
 | `score` | production statistics | `score` |
 | `launch_rocket` | launch the rocket | `launch_rocket` |
@@ -120,7 +121,7 @@ in the game chat. `FACTORIO_MCP_CHAT=0` turns this off.
 
 | Tool | Purpose |
 |---|---|
-| `map` | ASCII map for the model, any area between two corners (max. 100x60), belts as arrows `^ > v <`, machines as letters, ore `i c k s`, `t` tree, `~` water, `@` you. `layers` filters (`belts,pipes,power,machines,ore,trees,water,enemies`) |
+| `map` | ASCII map for the model, any area between two corners (max. 100x60), belts as arrows `^ > v <`, machines as letters, ore `i c k s`, `t` tree, `~` water, `@` you, rails `| - / \`, signals `! ?`, train stop `Z`, locomotive `M`, wagon `w`. `layers` filters (`belts,pipes,power,rails,machines,ore,trees,water,enemies`) |
 | `render_map` | realistic SVG for the **human** (terrain, ore density, trees, machines with status ring, belts with direction, pipes, poles with wires, legend). Saves to `renders/` and starts a live viewer at `http://127.0.0.1:8765/` (follows the agent, zoom, free area). `FACTORIO_MCP_VIEWER_PORT=0` turns the viewer off |
 
 ### Watching items and machines
@@ -199,7 +200,7 @@ It checks the mod's logic, but not the behavior of the real engine.
   not checked live.
 - The character is created by script (`create_entity`) and moved by teleport.
   Whether a script character can mine and use its inventory in all cases will only show in practice.
-- `connect` (router), `snapshot`, `belt_neighbours`, `get_max_wire_distance`, offshore pump placement and `game.server_save` are only tested against the mock.
+- `connect` for belts, pipes and power (router), `snapshot`, `belt_neighbours`, `get_max_wire_distance`, offshore pump placement and `game.server_save` are only tested against the mock.
 - The boundary command for multi-part RCON replies comes from phiresky/factorio-mcp
   (used against real Factorio there), but is only tested against a fake server here.
 
@@ -208,6 +209,12 @@ It checks the mod's logic, but not the behavior of the real engine.
 See also `docs/PLAN_QWEN38.md` (status of each phase).
 
 
-Trains (rails, stations, schedules), oil and chemistry, defense, event messages from the mod
+Trains (stations, signals, schedules; rail laying is done, see `docs/PLAN_RAILS.md`), oil and chemistry, defense, event messages from the mod
 (attack, research finished), importing real blueprint strings, async jobs with `*_status` for longer actions (pattern from the
 companion repo), honest walking with pathfinding. Optimization ideas for Qwen3.8: `docs/PLAN_QWEN38.md`.
+
+## Rails
+
+`connect kind=rail` is checked against a real Factorio 2.0.77 (not only the mock): the piece geometry is learned from the game
+by `tools/calibrate_rails.py` (`src/factorio_agent_mcp/data/rail_table.json`, turned into `mod/fac_agent/scripts/rail_table.lua` by
+`tools/gen_rail_table.py`). After a Factorio update run both scripts again. Details and open points: `docs/PLAN_RAILS.md`.

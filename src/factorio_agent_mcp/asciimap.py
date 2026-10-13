@@ -10,7 +10,7 @@ from .game import as_list, as_map
 MAX_COLS = 100
 MAX_ROWS = 60
 
-LAYERS = ("machines", "belts", "pipes", "power", "ore", "trees", "water", "enemies")
+LAYERS = ("machines", "belts", "pipes", "power", "rails", "ore", "trees", "water", "enemies")
 
 ORE_CHAR = {
     "iron-ore": "i", "copper-ore": "c", "coal": "k", "stone": "s", "uranium-ore": "u",
@@ -30,6 +30,40 @@ KNOWN = {
     "splitter": "Y", "pipe-to-ground": "p",
 }
 BELT_NAMES_UNDER = {"underground-belt": "u"}
+
+RAIL_TYPES = {"straight-rail", "half-diagonal-rail", "curved-rail-a", "curved-rail-b",
+              "elevated-straight-rail", "elevated-half-diagonal-rail", "elevated-curved-rail-a",
+              "elevated-curved-rail-b", "rail-ramp"}
+ROLLING_TYPES = {"locomotive", "cargo-wagon", "fluid-wagon", "artillery-wagon"}
+DIR16 = {"north": 0, "northnortheast": 1, "northeast": 2, "eastnortheast": 3, "east": 4, "eastsoutheast": 5,
+         "southeast": 6, "southsoutheast": 7, "south": 8, "southsouthwest": 9, "southwest": 10,
+         "westsouthwest": 11, "west": 12, "westnorthwest": 13, "northwest": 14, "northnorthwest": 15}
+
+
+def dir16(value: Any) -> int | None:
+    """Direction as 0..15 (north = 0, clockwise) from a name or a number; None if unknown."""
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in DIR16:
+        return DIR16[text]
+    try:
+        return int(float(text)) % 16
+    except ValueError:
+        return None
+
+
+def rail_char(item: dict[str, Any]) -> str:
+    """One character for a rail piece: | north-south, - east-west, / and \\ for diagonals and curves."""
+    d = dir16(item.get("d"))
+    if d is None:
+        return "+"
+    if d in (0, 8):
+        return "|"
+    if d in (4, 12):
+        return "-"
+    # rising to the north-east (/) for 1..3 and 9..11, to the north-west (\\) for 5..7 and 13..15
+    return "/" if d in (1, 2, 3, 9, 10, 11) else "\\"
 
 
 def _footprint(item: dict[str, Any]) -> tuple[int, int, int, int]:
@@ -54,6 +88,16 @@ def _glyph(item: dict[str, Any]) -> tuple[str, str]:
         return "=", "pipes"
     if etype == "pipe-to-ground":
         return "p", "pipes"
+    if etype in RAIL_TYPES:
+        return rail_char(item), "rails"
+    if etype in ("rail-signal", "rail-chain-signal"):
+        return ("!" if etype == "rail-signal" else "?"), "rails"
+    if etype == "train-stop":
+        return "Z", "rails"
+    if etype == "locomotive":
+        return "M", "rails"
+    if etype in ROLLING_TYPES:
+        return "w", "rails"
     if etype == "electric-pole":
         return "+", "power"
     if etype == "unit" or item.get("f") == "e":
@@ -68,7 +112,7 @@ def _select(layers: str | None) -> set[str]:
         return set(LAYERS)
     wanted = {p.strip().lower() for p in layers.replace(";", ",").split(",") if p.strip()}
     alias = {"belt": "belts", "pipe": "pipes", "pole": "power", "poles": "power", "electric": "power",
-             "machine": "machines", "entities": "machines", "resources": "ore", "tree": "trees", "enemy": "enemies"}
+             "machine": "machines", "rail": "rails", "train": "rails", "trains": "rails", "track": "rails", "tracks": "rails", "entities": "machines", "resources": "ore", "tree": "trees", "enemy": "enemies"}
     return {alias.get(p, p) for p in wanted} & set(LAYERS) or set(LAYERS)
 
 
@@ -122,7 +166,9 @@ def render(snapshot: dict[str, Any], layers: str | None = None) -> str:
 def _meaning(ch: str, it: dict[str, Any]) -> str:
     return {"^": "belt north", ">": "belt east", "v": "belt south", "<": "belt west",
             "u": "underground belt", "Y": "splitter", "=": "pipe", "p": "pipe-to-ground",
-            "+": "electric pole"}.get(ch, it.get("n", ch))
+            "+": "electric pole", "|": "rail north-south", "-": "rail east-west", "/": "rail diagonal /",
+            "\\": "rail diagonal \\", "!": "rail signal", "?": "chain signal", "Z": "train stop",
+            "M": "locomotive", "w": "wagon"}.get(ch, it.get("n", ch))
 
 
 def _compose(grid, x1, y1, w, h, used, snapshot) -> str:

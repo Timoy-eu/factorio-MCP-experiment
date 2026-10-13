@@ -31,6 +31,15 @@ TOPICS = {
 - Craft by hand: iron-gear-wheel, pipe, then offshore-pump, boiler, steam-engine, small-electric-pole for power (guide topic=power).
 - Research: build a lab, power it, insert automation-science-pack (1 copper-plate + 1 iron-gear-wheel). First research: automation.
 - Burner drills need fuel. Two coal drills facing each other feed each other.""",
+    "rails": """RAILS (trains)
+- connect kind=rail x1 y1 x2 y2 lays a rail line: straight, diagonal and curved pieces are chosen for you, the route goes around water and buildings, and trees or rocks in the way are removed (keep_trees=true avoids that).
+- dry_run=true first: it shows the pieces, the rail items you need and the end position. One rail item = one straight piece, a curve costs 3, a half-diagonal 2.
+- rail items: craft item=rail (1 stone + 1 steel-plate + 1 iron-stick make 2). Steel needs a furnace working on iron plates.
+- To extend a line: rail_end x y shows where it stops, then connect kind=rail from that end. A start within 3 tiles of an open end continues that line, otherwise a new line starts.
+- end_direction sets the facing of the last rail end: north, east, south, west or e.g. northeast.
+- The game checks the connection itself. On failure everything placed is picked up again and the reply names the piece.
+- Very long lines (more than about 150 tiles) or a U-turn can reach the search limit: lay them in parts via a waypoint.
+- map shows rails as | - / \\ , signals ! ?, train stops Z, locomotives M, wagons w. map layers=rails shows only them.""",
     "power": """POWER
 Chain: offshore-pump (on the water shore) -> pipe -> boiler (needs fuel) -> pipe -> steam-engine. 1 offshore pump supplies 20 boilers, 1 boiler feeds 2 steam engines (900 kW each).
 Use connect kind=pipe between them, then connect kind=power from the steam engine to the consumers. small-electric-pole: wires reach 7.5 tiles, but it only powers machines in the 5x5 area around it.
@@ -56,12 +65,12 @@ Check with inspect (electric network) and overview (no_power). no_power means: n
 - Enemies near (look shows them): move away or defend; a gun-turret needs ammo (insert firearm-magazine).""",
 }
 
-ORDER = ["method", "start", "tools", "belts", "power", "automation", "debugging"]
+ORDER = ["method", "start", "tools", "belts", "rails", "power", "automation", "debugging"]
 
 
 TOOL_GROUPS = [
     ("Act", ["gather", "craft", "build", "build_next_to", "build_miner", "build_miners", "rotate", "move_entity", "move_to",
-             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "research", "launch_rocket",
+             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "rail_end", "research", "launch_rocket",
              "set_game_speed"]),
     ("See", ["status", "look", "find", "map", "inspect", "list_entities", "inventory", "resource_patch", "can_place",
              "nearest_buildable", "overview"]),

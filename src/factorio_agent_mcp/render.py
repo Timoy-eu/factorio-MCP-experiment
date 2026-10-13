@@ -45,6 +45,8 @@ def hint_for(err: GameError) -> str:
                     f"insert {PLATE_SOURCES[item]}, fuel, wait, collect")
         if item in GATHERABLE:
             return f"gather item={item}{n}"
+        if item == "rail":
+            return f"craft item=rail{n} (1 stone + 1 steel-plate + 1 iron-stick make 2 rail; steel needs a furnace)"
         return f"craft item={item}{n}" if item else "craft or gather the missing parts"
     if code == "blocked":
         suggestion = as_map(data.get("suggestion"))
@@ -71,6 +73,10 @@ def hint_for(err: GameError) -> str:
         return "list_entities or map to find the exact coordinates"
     if code == "bad_direction":
         return "direction must be north, east, south, west (or auto for build)"
+    if code == "disconnected":
+        return "inspect the piece, or lay the line in shorter parts (connect kind=rail with a waypoint)"
+    if code == "no_path":
+        return "pick a goal on land, or lay the line in parts via a waypoint; map layers=water,rails shows the area"
     if code == "unknown_entity":
         return "use the full name, e.g. stone-furnace, burner-mining-drill, transport-belt, small-electric-pole"
     if code == "mod_missing":
@@ -350,7 +356,65 @@ def research_info_text(data: dict[str, Any]) -> str:
             f"still needs packs: {packs}")
 
 
+DIR16_NAMES = ["north", "north-northeast", "northeast", "east-northeast", "east", "east-southeast", "southeast",
+               "south-southeast", "south", "south-southwest", "southwest", "west-southwest", "west", "west-northwest",
+               "northwest", "north-northwest"]
+RAIL_SHORT = {"straight-rail": "straight", "half-diagonal-rail": "half-diagonal", "curved-rail-a": "curve-a", "curved-rail-b": "curve-b"}
+
+
+def dir16_name(value: Any) -> str:
+    try:
+        return DIR16_NAMES[int(value) % 16]
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def rail_end_text(point: dict[str, Any]) -> str:
+    text = at(point)
+    if point.get("direction") is not None:
+        text += f" facing {dir16_name(point['direction'])} (direction={int(point['direction'])})"
+    return text
+
+
+def rail_connect_text(data: dict[str, Any]) -> str:
+    kinds = ", ".join(f"{n} {RAIL_SHORT.get(k, k)}" for k, n in sorted(as_map(data.get("by_type")).items()))
+    trees = data.get("trees_to_clear") or data.get("trees_cleared")
+    if "enough" in data:
+        text = f"rail line: {data.get('pieces')} pieces ({kinds}), needs {data.get('needed')} rail, you have {data.get('have')}"
+        text += " (enough)" if data.get("enough") else f" (missing {data['needed'] - data['have']}: craft item=rail count={data['needed'] - data['have']})"
+        if data.get("to"):
+            text += f"; ends at {rail_end_text(as_map(data['to']))}"
+        if trees:
+            text += f"; {trees} tree/rock to remove on the way (keep_trees=true avoids that)"
+        if data.get("continues_existing"):
+            text += "; continues the open rail end you named"
+        return text
+    text = f"laid {data.get('placed')} rail pieces ({kinds}), used {data.get('rails_used')} rail"
+    if data.get("reused"):
+        text += f", joined {data['reused']} existing pieces"
+    text += f"; end of the line at {rail_end_text(as_map(data.get('to')))}; connection verified by the game"
+    if data.get("continues_existing"):
+        text += "; continued an existing rail end"
+    if data.get("trees_cleared"):
+        text += f"; removed {data['trees_cleared']} trees/rocks (wood and stone are in your inventory)"
+    return text
+
+
+def rail_end_list_text(data: dict[str, Any]) -> str:
+    ends = as_list(data.get("ends"))
+    if not ends:
+        return "no open rail end here (a rail that is connected on both sides has none). connect kind=rail x1 y1 x2 y2 starts a new line"
+    lines = [f"{len(ends)} open rail end(s), nearest first (shown {len(ends)} of {data.get('count')}):"]
+    for e in ends:
+        lines.append(f"- {e.get('piece')} at ({num(e.get('x'))},{num(e.get('y'))}): open end at ({num(e.get('end_x'))},{num(e.get('end_y'))}) "
+                     f"facing {dir16_name(e.get('end_direction'))} (direction={int(e.get('end_direction', 0))})")
+    lines.append("continue with: connect kind=rail x1=<end x> y1=<end y> x2=<goal x> y2=<goal y>")
+    return "\n".join(lines)
+
+
 def connect_text(data: dict[str, Any]) -> str:
+    if "by_type" in data:
+        return rail_connect_text(data)
     if "enough" in data:
         text = f"{data.get('length')} tiles, needs {data.get('needed')} {data.get('item')}, you have {data.get('have')}"
         return text + (" (enough)" if data.get("enough") else f" (missing {data['needed'] - data['have']})")

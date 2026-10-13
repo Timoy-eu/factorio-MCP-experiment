@@ -204,7 +204,7 @@ def apply_profile(profile: str | None = None) -> list[str]:
 
 @tool()
 def guide(topic: str = "") -> str:
-    """How to play. topic: method, start, tools, belts, power, automation, debugging, or empty for all. Read once at the start."""
+    """How to play. topic: method, start, tools, belts, rails, power, automation, debugging, or empty for all. Read once at the start."""
     return guide_module.text(topic, set(_registered) or None)
 
 
@@ -375,10 +375,17 @@ def move_to(x: float, y: float) -> str:
 
 @tool("lays {kind} from ({x1:g}, {y1:g}) to ({x2:g}, {y2:g})", lambda a: a["dry_run"])
 def connect(kind: str, x1: float, y1: float, x2: float, y2: float, entity: str = "",
-            end_direction: str = "", dry_run: bool = False) -> str:
-    """Lay belt, pipe or power poles from (x1,y1) to (x2,y2); belts and pipes route around obstacles. end_direction: facing of the last belt. dry_run=true only counts the pieces."""
+            end_direction: str = "", dry_run: bool = False, keep_trees: bool = False) -> str:
+    """Lay belt, pipe, power poles or rail (kind) from (x1,y1) to (x2,y2); belts, pipes and rails route around obstacles. rail: straight, diagonal and curves, joins an open rail end near the start, cuts trees in the way unless keep_trees=true. end_direction: facing of the last belt or rail end. dry_run=true only counts the pieces."""
     return run(lambda g: render.connect_text(g.call("connect", kind.strip().lower(), _num(x1), _num(y1), _num(x2), _num(y2),
-                                                    _name(entity) or None, direction_name(end_direction) if end_direction else None, dry_run)))
+                                                    _name(entity) or None, direction_name(end_direction) if end_direction else None,
+                                                    dry_run, keep_trees)))
+
+
+@tool()
+def rail_end(x: float, y: float, radius: float = 6) -> str:
+    """Open rail ends near (x,y): where a rail line stops and in which direction it points. Use the end position as the start of connect kind=rail to continue the line."""
+    return run(lambda g: render.rail_end_list_text(g.call("rail_end", _num(x), _num(y), _num(radius))))
 
 
 @tool()

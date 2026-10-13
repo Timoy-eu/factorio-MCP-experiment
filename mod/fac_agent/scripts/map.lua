@@ -9,6 +9,10 @@ local px, py, r1 = C.px, C.py, C.r1
 local MAX_SIDE = 160
 local MAX_ENTITIES = 6000
 local ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+local RAIL_TYPES = { ["straight-rail"] = true, ["half-diagonal-rail"] = true, ["curved-rail-a"] = true, ["curved-rail-b"] = true,
+  ["elevated-straight-rail"] = true, ["elevated-half-diagonal-rail"] = true, ["elevated-curved-rail-a"] = true, ["elevated-curved-rail-b"] = true,
+  ["rail-ramp"] = true, ["rail-support"] = false }
+local ROLLING_TYPES = { locomotive = true, ["cargo-wagon"] = true, ["fluid-wagon"] = true, ["artillery-wagon"] = true }
 local SKIP_TYPES = { tree = true, resource = true, character = true, corpse = true, ["item-entity"] = true, ["entity-ghost"] = true }
 
 -- x1,y1,x2,y2 are tile coordinates; with all four nil the area is centred on the agent
@@ -85,6 +89,11 @@ function M.snapshot(x1, y1, x2, y2, radius)
       end
       local ew, eh = size[1], size[2]
       local dname = e.supports_direction and C.direction_name(e) or nil
+      local rolling = ROLLING_TYPES[e.type]
+      if RAIL_TYPES[e.type] or e.type == "rail-signal" or e.type == "rail-chain-signal" then
+        dname = tostring(e.direction) -- rails use all 16 direction values, always as a number
+      end
+      if rolling then dname = nil end
       if (dname == "east" or dname == "west") and ew ~= eh then ew, eh = eh, ew end
       local item = {
         n = e.name, t = e.type, x = r1(px(e.position)), y = r1(py(e.position)), w = ew, h = eh,
@@ -95,6 +104,16 @@ function M.snapshot(x1, y1, x2, y2, radius)
       if e.get_recipe then
         local ok, rec = pcall(function() return e.get_recipe() end)
         if ok and rec then item.r = rec.name end
+      end
+      if rolling then
+        item.o = math.floor((e.orientation or 0) * 1000 + 0.5) / 1000 -- 0..1, 0 = north, 0.25 = east
+        local ew2, eh2 = ew, eh
+        if (item.o >= 0.125 and item.o < 0.375) or (item.o >= 0.625 and item.o < 0.875) then ew2, eh2 = eh, ew end
+        item.w, item.h = ew2, eh2
+      end
+      if e.type == "train-stop" then
+        local ok, nm = pcall(function() return e.backer_name end)
+        if ok and nm then item.bn = nm end
       end
       if e.type == "underground-belt" then
         local ok, kind = pcall(function() return e.belt_to_ground_type end)

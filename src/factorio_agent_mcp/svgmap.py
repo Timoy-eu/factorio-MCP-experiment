@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import math
+from functools import lru_cache
 from html import escape
+from pathlib import Path
 from typing import Any
 
-from .asciimap import ARROW
+from .asciimap import ARROW, RAIL_TYPES, ROLLING_TYPES, dir16
 from .game import as_list, as_map
 
 ORE_COLOR = {
@@ -32,6 +35,36 @@ STATUS_RING = {
     "no_ingredients": "#e08030", "missing_required_fluid": "#e08030", "low_power": "#e0c020",
 }
 HUD_BG = "#111418"
+
+
+@lru_cache(maxsize=1)
+def _rail_table() -> dict[str, Any]:
+    try:
+        return json.loads((Path(__file__).parent / "data" / "rail_table.json").read_text())["pieces"]
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
+def rail_path(item: dict[str, Any]) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]] | None:
+    """Cubic Bezier (p0, c0, c1, p1) of one rail piece in tile coordinates, from the learned end positions and directions."""
+    d = dir16(item.get("d"))
+    piece = _rail_table().get(f"{item.get('n')}|{d}")
+    if piece is None:
+        return None
+    x, y = float(item["x"]), float(item["y"])
+    a, b = piece["front"], piece["back"]
+    pa = (x + a["end_rel"][0], y + a["end_rel"][1])
+    pb = (x + b["end_rel"][0], y + b["end_rel"][1])
+    chord = math.hypot(pa[0] - pb[0], pa[1] - pb[1])
+    k = chord * 0.4
+
+    def outward(end_dir: int) -> tuple[float, float]:
+        ang = end_dir * math.pi / 8  # 0 = north, clockwise
+        return math.sin(ang), -math.cos(ang)
+
+    oa, ob = outward(a["end_dir"]), outward(b["end_dir"])
+    # the curve leaves each end against its outward direction, into the piece
+    return pa, (pa[0] - oa[0] * k, pa[1] - oa[1] * k), (pb[0] - ob[0] * k, pb[1] - ob[1] * k), pb
 
 
 def _hash(x: int, y: int) -> float:
@@ -120,7 +153,45 @@ def render(snapshot: dict[str, Any], scale: int = 16, grid: bool = True, title: 
     belts = [e for e in ents if e.get("t") in ("transport-belt", "underground-belt", "splitter")]
     pipes = [e for e in ents if e.get("t") in ("pipe", "pipe-to-ground")]
     poles = [e for e in ents if e.get("t") == "electric-pole"]
-    others = [e for e in ents if e not in belts and e not in pipes and e not in poles]
+    rails = [e for e in ents if e.get("t") in RAIL_TYPES]
+    signals = [e for e in ents if e.get("t") in ("rail-signal", "rail-chain-signal")]
+    stops = [e for e in ents if e.get("t") == "train-stop"]
+    rolling = [e for e in ents if e.get("t") in ROLLING_TYPES]
+    track_stuff = [id(e) for e in rails + signals + stops + rolling]
+    others = [e for e in ents if e not in belts and e not in pipes and e not in poles and id(e) not in track_stuff]
+
+    # rails: ballast band, sleepers, two steel rails (a wide light stroke with a narrower ballast stroke on top)
+    for r in rails:
+        path = rail_path(r)
+        if path is None:
+            continue
+        (x0, y0), (cx0, cy0), (cx1, cy1), (x3, y3) = path
+        dpath = f"M{X(x0):.1f},{Y(y0):.1f} C{X(cx0):.1f},{Y(cy0):.1f} {X(cx1):.1f},{Y(cy1):.1f} {X(x3):.1f},{Y(y3):.1f}"
+        add(f'<path d="{dpath}" fill="none" stroke="#7b7568" stroke-width="{s * 0.95:.1f}" stroke-linecap="butt"/>'
+            f'<path d="{dpath}" fill="none" stroke="#4e3f2c" stroke-width="{s * 0.8:.1f}" stroke-dasharray="{s * 0.12:.1f} {s * 0.3:.1f}"/>'
+            f'<path d="{dpath}" fill="none" stroke="#c9ced6" stroke-width="{s * 0.5:.1f}"/>'
+            f'<path d="{dpath}" fill="none" stroke="#5c5649" stroke-width="{s * 0.34:.1f}"/>')
+
+    for t in stops:
+        tx, ty = X(t["x"]), Y(t["y"])
+        add(f'<rect x="{tx - s * 0.45:.1f}" y="{ty - s * 0.45:.1f}" width="{s * 0.9:.1f}" height="{s * 0.9:.1f}" rx="{s * 0.15:.1f}" fill="#3a78c2" stroke="#10243d" stroke-width="1.5"/>')
+        if t.get("bn"):
+            add(f'<text x="{tx:.1f}" y="{ty - s * 0.6:.1f}" text-anchor="middle" fill="#fff" font-size="{max(9, int(s * 0.7))}" '
+                f'style="paint-order:stroke" stroke="#000" stroke-width="2.5">{escape(str(t["bn"]))}</text>')
+
+    for sg in signals:
+        chain = sg.get("t") == "rail-chain-signal"
+        add(f'<circle cx="{X(sg["x"]):.1f}" cy="{Y(sg["y"]):.1f}" r="{s * 0.28:.1f}" fill="{"#3a9bd9" if chain else "#d94a3a"}" stroke="#111" stroke-width="1.2"/>')
+
+    for v in rolling:
+        length, width = max(float(v.get("w") or 1), float(v.get("h") or 1)), min(float(v.get("w") or 1), float(v.get("h") or 1))
+        fill, stroke = ("#b5483a", "#4a1a14") if v.get("t") == "locomotive" else ("#8d949c", "#3a3f45")
+        ang = float(v.get("o") or 0) * 360
+        add(f'<g transform="translate({X(v["x"]):.1f},{Y(v["y"]):.1f}) rotate({ang:.1f})" filter="url(#sh)">'
+            f'<rect x="{-width * s / 2 + 1:.1f}" y="{-length * s / 2 + 1:.1f}" width="{width * s - 2:.1f}" height="{length * s - 2:.1f}" rx="{s * 0.2:.1f}" fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>'
+            + (f'<polygon points="0,{-length * s / 2 + 2:.1f} {s * 0.3:.1f},{-length * s / 2 + s * 0.6:.1f} {-s * 0.3:.1f},{-length * s / 2 + s * 0.6:.1f}" fill="#fff" opacity="0.8"/>'
+               if v.get("t") == "locomotive" else "") + '</g>')
+
 
     # pipes
     pipe_at = {(int(math.floor(p["x"])), int(math.floor(p["y"]))) for p in pipes}
@@ -220,6 +291,16 @@ def render(snapshot: dict[str, Any], scale: int = 16, grid: bool = True, title: 
         items.append(("#e0b833", "belt (chevron = direction)"))
     if pipes:
         items.append(("#8996a2", "pipe"))
+    if rails:
+        items.append(("#c9ced6", "rail"))
+    if stops:
+        items.append(("#3a78c2", "train stop"))
+    if signals:
+        items.append(("#d94a3a", "rail signal (blue = chain)"))
+    if any(v.get("t") == "locomotive" for v in rolling):
+        items.append(("#b5483a", "locomotive"))
+    if any(v.get("t") != "locomotive" for v in rolling):
+        items.append(("#8d949c", "wagon"))
     if poles:
         items.append(("#8a5a2b", "pole / wire"))
     if any(e.get("f") == "e" for e in others):

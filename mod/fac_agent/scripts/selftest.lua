@@ -14,7 +14,7 @@ local SIZE = 14
 local GIVE = {
   ["transport-belt"] = 20, ["small-electric-pole"] = 8, ["stone-furnace"] = 3, ["wooden-chest"] = 3,
   ["assembling-machine-1"] = 1, ["inserter"] = 1, ["iron-plate"] = 6, ["offshore-pump"] = 1,
-  ["burner-mining-drill"] = 2, coal = 10,
+  ["burner-mining-drill"] = 2, coal = 10, rail = 80,
 }
 
 local function good(s) return type(s) == "string" and s:find('"ok":true', 1, true) ~= nil end
@@ -212,6 +212,18 @@ function M.run(x, y)
     return "fail", tostring(r):sub(1, 160)
   end)
 
+  check("rail_route", function()
+    if not defines.rail_direction then return "skip", "this Factorio has no rail API (defines.rail_direction)" end
+    local r = Connect.connect("rail", ox + 2, oy + 2, ox + 12, oy + 8, nil, nil, false, true)
+    if not good(r) then return "fail", "rail line failed: " .. tostring(r):sub(1, 200) end
+    if not r:find('"connected":true', 1, true) then return "fail", "rails placed but not connected: " .. tostring(r):sub(1, 160) end
+    local ends = require("scripts.rails").rail_end(ox + 12, oy + 8, 6)
+    if not (good(ends) and ends:find('"end_direction"', 1, true)) then return "fail", "rail_end found no open end: " .. tostring(ends):sub(1, 160) end
+    local r2 = Connect.connect("rail", ox + 12, oy + 8, ox + 2, oy + 12, nil, nil, false, true)
+    if not good(r2) then return "warn", "first line ok, continuing it failed: " .. tostring(r2):sub(1, 160) end
+    return "ok", "rail line routed, verified by the game, open end found and continued"
+  end)
+
   check("chat_event", function()
     local ok1 = defines.events and defines.events.on_console_chat ~= nil
     local ok2 = type(game.get_player) == "function"
@@ -238,7 +250,7 @@ function M.run(x, y)
 
   local summary = { ok = 0, fail = 0, skip = 0, warn = 0 }
   for _, r in ipairs(results) do summary[r.s] = (summary[r.s] or 0) + 1 end
-  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.2.0" }
+  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.0" }
 end
 
 return M

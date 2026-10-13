@@ -78,7 +78,7 @@ def test_connect_power(world, game):
 
 def test_connect_missing_items(world, game):
     assert server.connect("belt", 0.5, 0.5, 5.5, 0.5).startswith("ERR missing")
-    assert server.connect("rail", 0, 0, 1, 1).startswith("ERR bad_kind")
+    assert server.connect("monorail", 0, 0, 1, 1).startswith("ERR bad_kind")
 
 
 def test_score_and_research_info(world, game):

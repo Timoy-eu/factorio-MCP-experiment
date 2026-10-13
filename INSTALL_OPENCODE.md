@@ -43,7 +43,7 @@ The command `~/factorio-agent-mcp/.venv/bin/factorio-agent-mcp` is the `command`
 1. Unpack the headless version, e.g. to `~/factorio`.
 2. Install the mod (the `mods/` folder is in the Factorio directory):
    ```bash
-   cp ~/factorio-agent-mcp/dist/fac_agent_0.2.0.zip ~/factorio/mods/
+   cp ~/factorio-agent-mcp/dist/fac_agent_0.3.0.zip ~/factorio/mods/
    ```
    To play along, put the same zip into the `mods/` folder of your game client.
 3. Create `~/factorio/server-settings.json` (template: `~/factorio/data/server-settings.example.json` in the Factorio folder) and set these values:
