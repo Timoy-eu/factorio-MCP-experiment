@@ -71,14 +71,32 @@ Playing along: in the game "Multiplayer", "Connect to address", `server-ip` (loc
 
 ## 5. Serve the local model
 
-Example llama.cpp (others: see the notes below):
+Ready-made settings for the two Qwen3.8 variants (llama.cpp `llama-server`). The sampling values are
+the usual Qwen3 starting values; check the model card on Hugging Face and compare with the eval runner (section 11).
+
+**Qwen3.8 27B (dense, fits a 24 GB GPU at Q4_K_M):**
 
 ```bash
-llama-server -m /path/to/qwen-27b.gguf --port 8080 -c 65536 --jinja
+llama-server -m /path/to/qwen3.8-27b-Q4_K_M.gguf --port 8080 --jinja -c 131072 \
+  --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0 -ngl 99
 ```
 
-`--jinja` enables the tool-calling template and is important for Qwen. For Ollama: context
-at least 16k to 32k (`num_ctx`), otherwise tool calls break off easily.
+Config: `examples/opencode.qwen38-27b.json` (profile `full`).
+
+**Qwen3.8 Flash-Next (MoE, about 6B active parameters):** keep the experts in RAM, the rest on the GPU.
+
+```bash
+llama-server -m /path/to/qwen3.8-flash-next-Q4_K_M.gguf --port 8080 --jinja -c 131072 \
+  --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0 -ngl 99 --n-cpu-moe 40
+```
+
+Lower `--n-cpu-moe` until the GPU memory is full; the RAM need is listed on the GGUF page.
+Config: `examples/opencode.qwen38-flash-next.json` (profile `core`, fewer tools, easier to choose from).
+
+Notes:
+- `--jinja` enables the tool-calling template; without it Qwen's tool calls break.
+- Thinking mode: costs tokens on every step but can help with planning (power, belts). Measure both with the eval runner.
+- Ollama: set the context to at least 32k (`num_ctx`), otherwise tool calls break off.
 
 ## 6. Configure OpenCode
 
@@ -146,6 +164,11 @@ Open the live viewer for yourself after `factorio_render_map` at `http://127.0.0
 
 ## 9. Tips for local models
 
+- Tool profile: `FACTORIO_MCP_PROFILE=core` offers about 27 tools instead of 47 (about 2,900 instead of
+  5,300 tokens of tool descriptions) and makes the choice easier for small models. `full` adds blueprints,
+  measuring tools, maps for the human and more.
+- Every action reply ends with a `[state]` line (position, carried items, next step), and `goal` keeps a
+  checklist that is shown there. Repeated failing calls get a `STOP` reply so the model does not loop.
 - If context gets tight: enable fewer tools. In OpenCode you can turn off single tools:
   ```json
   "tools": { "factorio_run_lua": false, "factorio_render_map": false }
@@ -169,3 +192,18 @@ Open the live viewer for yourself after `factorio_render_map` at `http://127.0.0
 
 On the first run in real Factorio small API differences may show up (see README, "Known uncertainties").
 Send me the error message and the log, and I will adjust the mod.
+
+
+## 11. Measuring with the eval runner
+
+To compare settings (profile, sampling, thinking, model) systematically:
+
+```bash
+factorio-agent-eval --base-url http://127.0.0.1:8080/v1 --model qwen38-27b --scenario S1 --runs 3 --profile core --label "27b core"
+factorio-agent-eval --scenario all --runs 3 --profile full --label "27b full"
+```
+
+Scenarios: S1 10 iron plates, S2 4 working burner miners, S3 steam power for a machine, S4 research automation,
+S5 a belt of 5 pieces between drill and furnace. Each run appends a line to `eval-runs.jsonl` (success, steps,
+tool calls, malformed calls, ERR and STOP replies, tokens, game time, tools used). The world is not reset
+between runs: load a fresh save before each run, for example with `--reset-cmd "./reload_save.sh"`.

@@ -5,11 +5,16 @@
     "llamacpp": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "llama-server (local)",
-      "options": { "baseURL": "http://127.0.0.1:8080/v1" },
+      "options": {
+        "baseURL": "http://127.0.0.1:8080/v1"
+      },
       "models": {
         "qwen": {
           "name": "Qwen 27B (local)",
-          "limit": { "context": 65536, "output": 8192 }
+          "limit": {
+            "context": 65536,
+            "output": 8192
+          }
         }
       }
     }
@@ -17,17 +22,22 @@
   "mcp": {
     "factorio": {
       "type": "local",
-      "command": ["/home/YOU/factorio-agent-mcp/.venv/bin/factorio-agent-mcp"],
+      "command": [
+        "/home/YOU/factorio-agent-mcp/.venv/bin/factorio-agent-mcp"
+      ],
       "environment": {
         "FACTORIO_RCON_HOST": "127.0.0.1",
         "FACTORIO_RCON_PORT": "27015",
         "FACTORIO_RCON_PASSWORD": "secret",
         "FACTORIO_MCP_DATA_DIR": "/home/YOU/factorio-agent-data",
-        "FACTORIO_MCP_RENDER_DIR": "/home/YOU/factorio-agent-data/renders"
+        "FACTORIO_MCP_RENDER_DIR": "/home/YOU/factorio-agent-data/renders",
+        "FACTORIO_MCP_PROFILE": "core"
       },
       "enabled": true,
       "timeout": 15000
     }
   },
-  "instructions": ["AGENTS.md"]
+  "instructions": [
+    "AGENTS.md"
+  ]
 }

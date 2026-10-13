@@ -177,7 +177,7 @@ def test_fuel_collect_insert_cycle(world, game):
     assert server.insert(3, 3, "iron-ore").startswith("ERR no_item")
     assert server.collect().startswith("nothing to collect")
     world.exec("mock.first('stone-furnace').output.insert{name='iron-plate', count=7}")
-    assert server.collect() == "collected iron-plate 7"
+    assert server.collect().startswith("collected iron-plate 7")
     assert world.eval("mock.inventory_count('iron-plate')") == 7
 
 

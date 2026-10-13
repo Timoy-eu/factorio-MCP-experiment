@@ -27,34 +27,52 @@ def at(point: dict[str, Any]) -> str:
 
 
 def hint_for(err: GameError) -> str:
+    """A next step, written as a call the model can copy (tool key=value)."""
     data = err.data
     code = err.code
     item = data.get("item")
+    count = data.get("count")
     if code == "no_item":
-        return f"get one with craft {item}, or gather the parts" if item else "craft or gather it first"
-    if code == "missing":
         if item in PLATE_SOURCES:
-            return (f"smelt {PLATE_SOURCES[item]} in a furnace (build stone-furnace, insert, fuel, wait, collect)")
+            return f"you need {item}: smelt {PLATE_SOURCES[item]} (build_miner ore={PLATE_SOURCES[item]}, or a furnace by hand)"
         if item in GATHERABLE:
-            return f"gather {item} {data.get('count', '')}".strip()
-        return f"craft {item} first or find it"
+            return f"gather item={item} count=10"
+        return f"craft item={item} count=1" if item else "craft or gather it first"
+    if code == "missing":
+        n = f" count={count}" if count else ""
+        if item in PLATE_SOURCES:
+            return (f"smelt {PLATE_SOURCES[item]}: build_miner ore={PLATE_SOURCES[item]}, or build a stone-furnace, "
+                    f"insert {PLATE_SOURCES[item]}, fuel, wait, collect")
+        if item in GATHERABLE:
+            return f"gather item={item}{n}"
+        return f"craft item={item}{n}" if item else "craft or gather the missing parts"
     if code == "blocked":
         suggestion = as_map(data.get("suggestion"))
+        entity = data.get("entity")
+        if suggestion and entity:
+            return f"build entity={entity} x={num(suggestion.get('x'))} y={num(suggestion.get('y'))}"
         if suggestion:
-            return f"try x={num(suggestion.get('x'))}, y={num(suggestion.get('y'))}"
-        return "pick another spot (use look)"
+            return f"use x={num(suggestion.get('x'))} y={num(suggestion.get('y'))}"
+        return "nearest_buildable entity=... to find a free spot"
     if code in ("not_found", "nothing_found", "no_ore"):
-        return "walk is automatic; use look or find to see what is nearby"
+        what = data.get("resource") or data.get("ore") or item
+        return f"find what={what}, or look radius=60" if what else "look radius=60 to see what is nearby"
     if code == "locked":
-        return "research it first (research tool)"
+        return "research name=<technology> first (research without a name lists options)"
     if code == "not_by_hand":
-        return "this needs a machine (furnace or assembler), not hand crafting"
+        return "this needs a machine: smelt plates in a furnace, other recipes in an assembler"
     if code == "not_gatherable":
-        return "gatherable by hand: wood, stone, coal, iron-ore, copper-ore"
+        return "gather works for wood, stone, coal, iron-ore, copper-ore"
     if code in ("rotate_failed", "not_rotatable"):
-        return "check the entity with look; some entities cannot rotate"
+        return "inspect x y to see the entity; some entities cannot rotate"
     if code == "no_site":
-        return "move to a bigger ore patch (find iron-ore) or clear obstacles"
+        return "resource_patch resource=... then nearest_buildable near its center"
+    if code == "no_entity":
+        return "list_entities or map to find the exact coordinates"
+    if code == "bad_direction":
+        return "direction must be north, east, south, west (or auto for build)"
+    if code == "unknown_entity":
+        return "use the full name, e.g. stone-furnace, burner-mining-drill, transport-belt, small-electric-pole"
     if code == "mod_missing":
         return "install mod/fac_agent into the Factorio mods folder and restart the server"
     if code == "no_connection":
@@ -104,6 +122,14 @@ def status_text(data: dict[str, Any]) -> str:
     if not placed:
         lines.append("tip: call guide once to learn how to play (method, belts, power, debugging)")
     return "\n".join(lines)
+
+
+def footer_text(data: dict[str, Any], goal_line: str = "") -> str:
+    """Compact state line appended to action replies."""
+    inventory = as_map(data.get("inventory"))
+    placed = as_map(data.get("placed"))
+    nxt = goal_line or ("next: " + (next_steps(inventory, placed, data.get("research"), limit=1) or ["status"])[0])
+    return f"[state] at {at(as_map(data.get('position')))} | carry: {inventory_text(inventory, limit=8)} | {nxt}"
 
 
 def look_text(data: dict[str, Any]) -> str:

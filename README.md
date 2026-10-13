@@ -1,7 +1,7 @@
 # factorio-agent-mcp
 
 MCP server that lets even small local models play Factorio 2.0. Instead of 70 low-level tools it offers
-50 high-level actions (13 core actions plus FLE parity, maps, blueprints). The server handles planning, orientation and verification;
+47 high-level actions (13 core actions plus FLE parity, maps, blueprints), or 27 in the `core` profile for small models. The server handles planning, orientation and verification;
 the model only has to call the tools. Background and sources: `FINDINGS.md`.
 
 ```
@@ -12,8 +12,10 @@ Model <-> MCP client <-stdio-> factorio-agent-mcp (Python) <-RCON-> Factorio + m
 
 Everything is tested against a mock of the Factorio API (`pytest`): Python, the RCON protocol
 (including multi-part replies), the real mod Lua code, orientation search, read-back, recursive
-crafting. Nothing has been run against a real Factorio 2.0 yet. Expect small adjustments
-to individual API calls (see "Known uncertainties").
+crafting. The self-test has been run once against a real Factorio 2.0.77 server: 14 of 16 checks passed,
+the assembler rotation failure is fixed (assemblers only have a direction with fluid recipes), the drill check
+was skipped (no ore near the sandbox). Most tools have not been used in a real game yet; expect small
+adjustments (see "Known uncertainties").
 
 ## Installation
 
@@ -139,9 +141,8 @@ belt is an estimate (average load), not an exact count. Not yet checked against 
 
 | Tool | Purpose |
 |---|---|
-| `blueprint_save` | save an area as a blueprint (file `factorio-data/blueprints/<name>.json`, editable by hand) |
-| `blueprint_list`, `blueprint_show`, `blueprint_note`, `blueprint_delete` | manage, view as ASCII (also rotated), maintain notes and status `draft/tested` |
-| `blueprint_place` | build with rotation 0/90/180/270, `dry_run` checks items and free space, failures are reported one by one |
+| `blueprint` | `action=save` an area as a blueprint (file `factorio-data/blueprints/<name>.json`, editable by hand), `list`, `show` as ASCII (also rotated), `place` with rotation 0/90/180/270 and `dry_run`, `note` (notes and status `draft/tested`), `delete` |
+| `goal` | current goal with a checklist (`action=set text=... steps="a; b; c"`, `done`, `show`, `clear`), shown in `status` and after every action |
 | `notes` | persistent notebook (goals, coordinates, lessons), survives context loss |
 | `overview` | count of all buildings and everything that is not running (no fuel, no power, ...) |
 | `checkpoint` | save the game so the human can load it later |
@@ -151,7 +152,25 @@ and you improve it together through notes and status. The folder is set via
 `FACTORIO_MCP_DATA_DIR` (default `factorio-data`).
 
 Replies are short texts with a suggested action on errors, for example
-`ERR missing: missing 4 iron-plate | try: smelt iron-ore in a furnace (...)`.
+`ERR blocked: cannot place stone-furnace at 10,5 | try: build entity=stone-furnace x=12 y=5`.
+
+### Help for small models
+
+- **Profiles:** `FACTORIO_MCP_PROFILE=core` offers 27 tools (about 2,900 tokens of descriptions) instead of 47
+  (about 5,300). `full` is the default.
+- **State line:** every action reply ends with `[state] at (x,y) | carry: ... | next: ...` (or the current goal step),
+  so the model rarely needs an extra `status` call.
+- **Copyable hints:** errors end with `try:` followed by a call with parameters (`build entity=... x=... y=...`,
+  `gather item=coal count=20`).
+- **Loop guard:** the third identical failing call, or the fourth failure of the same tool in a row, gets a
+  `STOP:` reply that tells the model to change its approach.
+- **Lenient names and arguments:** `Stone Furnace`, `stone_furnace` and `furnace` all mean `stone-furnace`;
+  inside `batch`, numbers sent as text are converted and wrong arguments return the correct signature.
+- **Bigger steps:** `build_miners ore=iron-ore count=4` builds several fueled drill-furnace pairs in one call; the
+  planner in `status` now also covers power, the lab, the first research and machines with `no_power`/`full_output`.
+- **Example session** in `examples/AGENTS.md`: a short, realistic sequence of calls; examples work better than rule lists.
+- **Eval runner:** `factorio-agent-eval` lets a model play fixed scenarios and logs success, steps, malformed calls,
+  ERR/STOP replies and tokens (see `INSTALL_OPENCODE.md`, section 11).
 
 ## Design decisions for small models
 
@@ -185,6 +204,9 @@ It checks the mod's logic, but not the behavior of the real engine.
   (used against real Factorio there), but is only tested against a fake server here.
 
 ## Ideas for later
+
+See also `docs/PLAN_QWEN38.md` (status of each phase).
+
 
 Trains (rails, stations, schedules), oil and chemistry, defense, event messages from the mod
 (attack, research finished), importing real blueprint strings, async jobs with `*_status` for longer actions (pattern from the

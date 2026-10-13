@@ -1,5 +1,18 @@
 # Plan: optimizing factorio-agent-mcp for Qwen3.8
 
+## Status (2026-10-13)
+
+| Phase | Status |
+|---|---|
+| 1 Evaluation | runner and scenarios S1 to S5 done (`factorio-agent-eval`, `src/factorio_agent_mcp/evaluation.py`); baseline runs with a real model still to do |
+| 2 Robustness | done: name normalisation and aliases, argument coercion and signature hints in `batch`, copyable `try:` calls, loop guard (`STOP:`) |
+| 3 Tool selection | done: profiles `core` (27 tools) and `full` (47), blueprint tools merged into one, long descriptions shortened; which profile is better per model is open until measured |
+| 4 Planner | done: power, lab, first research, `no_power`/`full_output`; plus `goal` tracker and `build_miners` |
+| 5 Images | open (check first whether OpenCode and llama-server pass images in tool replies) |
+| 6 Configuration/docs | done: `examples/opencode.qwen38-27b.json`, `examples/opencode.qwen38-flash-next.json`, install guide section 5 and 11; sampling and thinking still to measure |
+
+Additional: every action reply ends with a `[state]` line; `examples/AGENTS.md` contains an example session.
+
 As of 2026-10-12. Target models, both running locally:
 
 | | Qwen3.8 (27B) | Qwen3.8-Flash-Next |

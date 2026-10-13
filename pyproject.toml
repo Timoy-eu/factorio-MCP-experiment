@@ -4,16 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "factorio-agent-mcp"
-version = "0.1.0"
+version = "0.3.0"
 description = "MCP server that lets small local LLMs play Factorio 2.0 through a few high level tools"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.2"]
+license = {text = "MIT"}
 
 [project.optional-dependencies]
 test = ["pytest", "lupa"]
 
 [project.scripts]
 factorio-agent-mcp = "factorio_agent_mcp.server:main"
+factorio-agent-eval = "factorio_agent_mcp.evaluation:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

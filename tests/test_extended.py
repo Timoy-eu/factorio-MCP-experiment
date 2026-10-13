@@ -145,24 +145,24 @@ def test_blueprint_roundtrip(world, game, tmp_path, monkeypatch):
       mock.add_entity('transport-belt', 11.5, 13.5, 4)
       mock.add_entity('small-electric-pole', 13.5, 11.5)
     """)
-    assert server.blueprint_save("Smelt Row", 10, 10, 15, 15, "furnace with belt").startswith("saved")
-    assert "smelt-row" in server.blueprint_list()
-    shown = server.blueprint_show("smelt-row")
+    assert server.blueprint("save", "Smelt Row", 10, 10, 15, 15, description="furnace with belt").startswith("saved")
+    assert "smelt-row" in server.blueprint("list")
+    shown = server.blueprint("show", "smelt-row")
     assert "F" in shown and ">" in shown
-    rot = server.blueprint_show("smelt-row", 90)
+    rot = server.blueprint("show", "smelt-row", rotation=90)
     assert "v" in rot
     # empty area is rejected
-    assert server.blueprint_save("nothing", 100, 100, 105, 105).startswith("ERR empty")
+    assert server.blueprint("save", "nothing", 100, 100, 105, 105).startswith("ERR empty")
     # place far away, first without items
-    assert server.blueprint_place("smelt-row", 40, 40).startswith("ERR missing")
+    assert server.blueprint("place", "smelt-row", x=40, y=40).startswith("ERR missing")
     world.exec("mock.give('stone-furnace',1); mock.give('transport-belt',2); mock.give('small-electric-pole',1)")
-    assert "all spots free" in server.blueprint_place("smelt-row", 40, 40, dry_run=True)
-    out = server.blueprint_place("smelt-row", 40, 40)
+    assert "all spots free" in server.blueprint("place", "smelt-row", x=40, y=40, dry_run=True)
+    out = server.blueprint("place", "smelt-row", x=40, y=40)
     assert out.startswith("placed 4/4"), out
     assert world.eval("mock.entity_count('transport-belt')") == 4
-    out = server.blueprint_note("smelt-row", "needs coal first", "tested")
-    assert "[tested]" in out and "needs coal first" in server.blueprint_show("smelt-row")
-    assert server.blueprint_delete("smelt-row").startswith("deleted")
+    out = server.blueprint("note", "smelt-row", note="needs coal first", status="tested")
+    assert "[tested]" in out and "needs coal first" in server.blueprint("show", "smelt-row")
+    assert server.blueprint("delete", "smelt-row").startswith("deleted")
 
 
 def test_blueprint_rotation_math():
@@ -272,10 +272,9 @@ def test_guide_topics():
     # every tool named in the guide really exists
     import re
     names = {t for t in re.findall(r"\b([a-z_]{4,})\b", server.guide("tools"))}
-    registered = set(server.mcp._tool_manager._tools) if hasattr(server.mcp, "_tool_manager") else None
-    if registered:
-        mentioned = {n for n in names if "_" in n} - {"blueprint_save", "list", "show", "place", "note", "delete"}
-        assert mentioned <= registered, mentioned - registered
+    registered = set(server._registered)
+    mentioned = {n for n in names if "_" in n}
+    assert mentioned <= registered, mentioned - registered
 
 
 def test_batch_runs_in_order_and_stops(world, game):

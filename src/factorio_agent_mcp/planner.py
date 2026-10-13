@@ -53,10 +53,28 @@ def next_steps(inventory: dict[str, int], placed: dict[str, Any], research: str 
         steps.append("craft burner-mining-drill")
     if have("burner-mining-drill") > 0 and have("stone-furnace") > 0:
         steps.append("build_miner iron-ore")
-    if drills >= 1:
-        steps.append("collect plates from the furnaces, then craft more burner-mining-drill (aim for 4)")
-    if not research and drills >= 2:
-        steps.append("research automation (needs a lab and power, check research)")
+    if _problem_count(placed, "no_power") > 0:
+        steps.append("connect kind=power from your steam-engine to the machines with no_power (overview shows them)")
+    if _problem_count(placed, "full_output") > 0:
+        steps.append("collect, or add an inserter/belt that takes items out (some machines have full_output)")
+    if drills >= 1 and drills < 4:
+        steps.append("collect plates, then craft burner-mining-drill and build_miners ore=iron-ore count=2 (aim for 4)")
+    has_power = _placed_count(placed, "steam-engine") > 0
+    if drills >= 4 and not has_power:
+        parts = ("offshore-pump", "boiler", "steam-engine")
+        missing = [p for p in parts if have(p) == 0]
+        if missing:
+            steps.append("prepare power: craft " + ", ".join(missing) + " and 10 small-electric-pole (guide topic=power)")
+        else:
+            steps.append("build power: find what=water, build offshore-pump at the shore, boiler, steam-engine, "
+                         "connect kind=pipe, fuel the boiler (guide topic=power)")
+    labs = _placed_count(placed, "lab")
+    if has_power and labs == 0:
+        steps.append("craft lab, build it near a pole, connect kind=power")
+    if labs > 0 and have("automation-science-pack") < 10 and not research:
+        steps.append("craft item=automation-science-pack count=10, insert it into the lab, research name=automation")
+    elif labs > 0 and not research:
+        steps.append("research name=automation (or research to list options)")
     if not steps:
         steps.append("look around, then gather what is missing for your next craft")
     return steps[:limit]

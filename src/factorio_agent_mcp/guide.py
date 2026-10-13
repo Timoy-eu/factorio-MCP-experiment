@@ -1,8 +1,14 @@
 """Built-in game knowledge and working method for the model."""
 
-INSTRUCTIONS = """You play Factorio 2.0 through tools, together with a human. Start with `status` (position, inventory, next steps), then call `guide` once for the working method.
-Rules of thumb: act in small steps, read every reply, and verify the result with `map` or `inspect` before you build on it. A reply starting with ERR names the problem and a fix after "try:"; never repeat the same failing call.
-Never guess coordinates: use `find`, `look`, `resource_patch`, `nearest_buildable`, `can_place`. When something does not work, use `inspect`, `belt_contents`, `trace_item`, `machine_stats` to find out why. Write goals and locations with `notes`, check `read_chat` now and then for instructions from the human. `run_lua` is a last resort, only when no other tool can do the job."""
+INSTRUCTIONS = """You play Factorio 2.0 through tools, together with a human. Start with `status`, then call `guide` once.
+How to work:
+- One small step per call. Read every reply. Action replies end with a [state] line (position, what you carry, next step): use it instead of guessing.
+- For a bigger task set a goal with `goal action=set text=... steps="a; b; c"` and mark steps with `goal action=done`.
+- A reply starting with ERR names the problem; after "try:" stands a call you can copy. A reply starting with STOP means: change your approach, do not repeat.
+- Never guess coordinates: use `find`, `look`, `map`, `can_place`. Verify builds with `inspect` or `map`.
+- When something does not work: `machine_stats`, `inspect`, `overview`.
+- Save locations and lessons with `notes`. Check `read_chat` now and then; report with `say`.
+- `run_lua` only when absolutely necessary."""
 
 TOPICS = {
     "method": """WORKING METHOD
@@ -14,7 +20,8 @@ TOPICS = {
 6. Keep coordinates in notes (tag = location, goal or lesson). Notes survive context resets; read them with notes action=list.
 7. Call read_chat now and then: the human may give instructions in the game chat. Use say to report what you do or to ask.
 8. Use batch for known sequences (build, fuel, check) to save steps.
-9. Good layout? blueprint_save it, test it, then blueprint_note status=tested. Reuse it with blueprint_place.""",
+9. Good layout? blueprint action=save it, test it, then blueprint action=note status=tested. Reuse it with blueprint action=place.
+10. Bigger task? goal action=set text=... steps="a; b; c", then goal action=done after each step. The goal shows after every action.""",
     "start": """EARLY GAME (first 30 minutes)
 - Check status first: freeplay starts with a burner-mining-drill, a stone-furnace and a few iron plates.
 - gather coal 20, stone 10 (5 per stone-furnace), iron-ore 20. Wood also works as fuel.
@@ -47,22 +54,41 @@ Check with inspect (electric network) and overview (no_power). no_power means: n
 - Wrong direction: rotate, then verify with inspect. For drills and inserters inspect shows "outputs into ...".
 - Place failed: can_place shows the blocker and a free spot. nearest_buildable finds a free area.
 - Enemies near (look shows them): move away or defend; a gun-turret needs ammo (insert firearm-magazine).""",
-    "tools": """TOOL OVERVIEW
-Act: gather, craft, build, build_next_to, build_miner, rotate, move_entity, move_to, pickup, insert, extract, fuel, collect, set_recipe, connect, research, launch_rocket, set_game_speed.
-See: status, look, find, map (ASCII), inspect, list_entities, inventory, resource_patch, can_place, nearest_buildable, overview.
-Measure: belt_contents, trace_item, measure_flow, machine_stats, score, research_info.
-Combine: batch (several tools in one call). Talk: say (chat as [Bot]), read_chat (what the human typed).
-Remember: notes, checkpoint, blueprint_save, blueprint_list, blueprint_show, blueprint_place, blueprint_note, blueprint_delete.
-For the human only: render_map (you cannot see the picture, use map yourself).""",
 }
 
 ORDER = ["method", "start", "tools", "belts", "power", "automation", "debugging"]
 
 
-def text(topic: str = "") -> str:
+TOOL_GROUPS = [
+    ("Act", ["gather", "craft", "build", "build_next_to", "build_miner", "build_miners", "rotate", "move_entity", "move_to",
+             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "research", "launch_rocket",
+             "set_game_speed"]),
+    ("See", ["status", "look", "find", "map", "inspect", "list_entities", "inventory", "resource_patch", "can_place",
+             "nearest_buildable", "overview"]),
+    ("Measure", ["belt_contents", "trace_item", "measure_flow", "machine_stats", "score", "research_info"]),
+    ("Combine", ["batch"]),
+    ("Talk", ["say", "read_chat"]),
+    ("Plan and remember", ["goal", "notes", "blueprint", "checkpoint"]),
+    ("For the human only", ["render_map"]),
+]
+
+
+def tools_text(available: set[str] | None = None) -> str:
+    lines = ["TOOL OVERVIEW (only the tools you have)"]
+    for label, names in TOOL_GROUPS:
+        shown = [n for n in names if available is None or n in available]
+        if shown:
+            lines.append(f"{label}: {', '.join(shown)}.")
+    lines.append("Every action reply ends with a [state] line: position, what you carry, and the next step.")
+    return "\n".join(lines)
+
+
+def text(topic: str = "", available: set[str] | None = None) -> str:
     key = topic.strip().lower()
+    if key == "tools":
+        return tools_text(available)
     if key in TOPICS:
         return TOPICS[key]
     if key in ("", "all"):
-        return "\n\n".join(TOPICS[k] for k in ORDER)
+        return "\n\n".join(tools_text(available) if k == "tools" else TOPICS[k] for k in ORDER)
     return f"unknown topic '{topic}'. Topics: {', '.join(ORDER)}, or all"
