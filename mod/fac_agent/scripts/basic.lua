@@ -1,5 +1,6 @@
 -- Core tools: look, gather, craft, build, rotate, fuel, ... (all return JSON strings)
 local C = require("scripts.common")
+local Underground = require("scripts.underground")
 local M = {}
 
 local json, fail, done = C.json, C.fail, C.done
@@ -263,7 +264,7 @@ function M.build(entity, x, y, direction, flex, ug_type)
   local a = agent()
   local item = item_for(entity)
   if not item then return fail("unknown_entity", "unknown entity '" .. entity .. "'", { entity = entity }) end
-  if ug_type == nil and require("scripts.underground").is_underground(entity) then
+  if ug_type == nil and Underground.is_underground(entity) then
     return fail("use_build_underground", entity .. " is always a pair (entrance and exit); a single piece never works", { entity = entity })
   end
   local inventory = a.get_main_inventory()

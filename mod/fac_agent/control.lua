@@ -45,7 +45,7 @@ local api = {
 
 local wrapped = {}
 for name, fn in pairs(api) do wrapped[name] = safe(fn) end
-wrapped.version = function() return "0.3.1" end
+wrapped.version = function() return "0.3.2" end
 
 remote.add_interface("fac_agent", wrapped)
 

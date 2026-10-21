@@ -1,5 +1,6 @@
 -- connect: belts and pipes along a routed path, power poles along a straight line
 local C = require("scripts.common")
+local Rails = require("scripts.rails") -- require only works while control.lua loads, never inside a function
 local M = {}
 
 local fail, done = C.fail, C.done
@@ -293,7 +294,7 @@ end
 
 function M.connect(kind, x1, y1, x2, y2, entity, end_direction, dry_run, keep_trees)
   if kind == "rail" then
-    return require("scripts.rails").connect(x1, y1, x2, y2, end_direction, dry_run, keep_trees)
+    return Rails.connect(x1, y1, x2, y2, end_direction, dry_run, keep_trees)
   end
   if not DEFAULT_ENTITY[kind] then
     return fail("bad_kind", "kind must be belt, pipe, power or rail", { kind = kind })

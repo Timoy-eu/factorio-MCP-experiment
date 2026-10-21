@@ -3,6 +3,8 @@
 local C = require("scripts.common")
 local Basic = require("scripts.basic")
 local Connect = require("scripts.connect")
+local Rails = require("scripts.rails")
+local Underground = require("scripts.underground")
 local Map = require("scripts.map")
 local M = {}
 
@@ -213,7 +215,7 @@ function M.run(x, y)
   end)
 
   check("underground_pair", function()
-    local r = require("scripts.underground").build_underground("underground-belt", ox + 1, oy + 11, ox + 5, oy + 11)
+    local r = Underground.build_underground("underground-belt", ox + 1, oy + 11, ox + 5, oy + 11)
     if not good(r) then return "fail", "underground pair failed: " .. tostring(r):sub(1, 200) end
     if not r:find('"paired":true', 1, true) then return "fail", "pair not reported as paired: " .. tostring(r):sub(1, 160) end
     local lone = Basic.build("underground-belt", ox + 1, oy + 13, "east", 0)
@@ -226,7 +228,7 @@ function M.run(x, y)
     local r = Connect.connect("rail", ox + 2, oy + 2, ox + 12, oy + 8, nil, nil, false, true)
     if not good(r) then return "fail", "rail line failed: " .. tostring(r):sub(1, 200) end
     if not r:find('"connected":true', 1, true) then return "fail", "rails placed but not connected: " .. tostring(r):sub(1, 160) end
-    local ends = require("scripts.rails").rail_end(ox + 12, oy + 8, 6)
+    local ends = Rails.rail_end(ox + 12, oy + 8, 6)
     if not (good(ends) and ends:find('"end_direction"', 1, true)) then return "fail", "rail_end found no open end: " .. tostring(ends):sub(1, 160) end
     local r2 = Connect.connect("rail", ox + 12, oy + 8, ox + 2, oy + 12, nil, nil, false, true)
     if not good(r2) then return "warn", "first line ok, continuing it failed: " .. tostring(r2):sub(1, 160) end
@@ -259,7 +261,7 @@ function M.run(x, y)
 
   local summary = { ok = 0, fail = 0, skip = 0, warn = 0 }
   for _, r in ipairs(results) do summary[r.s] = (summary[r.s] or 0) + 1 end
-  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.1" }
+  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.2" }
 end
 
 return M
