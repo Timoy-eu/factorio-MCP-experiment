@@ -14,7 +14,7 @@ local SIZE = 14
 local GIVE = {
   ["transport-belt"] = 20, ["small-electric-pole"] = 8, ["stone-furnace"] = 3, ["wooden-chest"] = 3,
   ["assembling-machine-1"] = 1, ["inserter"] = 1, ["iron-plate"] = 6, ["offshore-pump"] = 1,
-  ["burner-mining-drill"] = 2, coal = 10, rail = 80,
+  ["burner-mining-drill"] = 2, coal = 10, rail = 80, ["underground-belt"] = 2,
 }
 
 local function good(s) return type(s) == "string" and s:find('"ok":true', 1, true) ~= nil end
@@ -212,6 +212,15 @@ function M.run(x, y)
     return "fail", tostring(r):sub(1, 160)
   end)
 
+  check("underground_pair", function()
+    local r = require("scripts.underground").build_underground("underground-belt", ox + 1, oy + 11, ox + 5, oy + 11)
+    if not good(r) then return "fail", "underground pair failed: " .. tostring(r):sub(1, 200) end
+    if not r:find('"paired":true', 1, true) then return "fail", "pair not reported as paired: " .. tostring(r):sub(1, 160) end
+    local lone = Basic.build("underground-belt", ox + 1, oy + 13, "east", 0)
+    if good(lone) then return "fail", "build placed a single underground belt, it should refuse" end
+    return "ok", "pair placed with entrance and exit, pairing checked by the game, single build refused"
+  end)
+
   check("rail_route", function()
     if not defines.rail_direction then return "skip", "this Factorio has no rail API (defines.rail_direction)" end
     local r = Connect.connect("rail", ox + 2, oy + 2, ox + 12, oy + 8, nil, nil, false, true)
@@ -250,7 +259,7 @@ function M.run(x, y)
 
   local summary = { ok = 0, fail = 0, skip = 0, warn = 0 }
   for _, r in ipairs(results) do summary[r.s] = (summary[r.s] or 0) + 1 end
-  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.0" }
+  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.1" }
 end
 
 return M

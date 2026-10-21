@@ -258,10 +258,14 @@ local function candidate_positions(entity, wanted, flex)
   return positions
 end
 
-function M.build(entity, x, y, direction, flex)
+-- ug_type: only for blueprint placement of one underground piece ("input" or "output")
+function M.build(entity, x, y, direction, flex, ug_type)
   local a = agent()
   local item = item_for(entity)
   if not item then return fail("unknown_entity", "unknown entity '" .. entity .. "'", { entity = entity }) end
+  if ug_type == nil and require("scripts.underground").is_underground(entity) then
+    return fail("use_build_underground", entity .. " is always a pair (entrance and exit); a single piece never works", { entity = entity })
+  end
   local inventory = a.get_main_inventory()
   if inventory.get_item_count(item) < 1 then
     return fail("no_item", "you have no " .. item, { item = item })
@@ -287,11 +291,11 @@ function M.build(entity, x, y, direction, flex)
   for _, pos in ipairs(positions) do
     for _, dname in ipairs(dirs) do
       if inventory.remove { name = item, count = 1 } == 1 then
-        local e = C.try_place(entity, pos, dname)
+        local e = C.try_place(entity, pos, dname, ug_type)
         if e then
           local actual = direction_name(e)
           local warning
-          if supports and not auto and actual ~= direction and e.type ~= "assembling-machine" then
+          if supports and not auto and not ug_type and actual ~= direction and e.type ~= "assembling-machine" then
             pcall(function() e.direction = DIRS[direction] end)
             actual = direction_name(e)
             if actual ~= direction then warning = "requested " .. direction .. " but entity faces " .. actual end
@@ -355,6 +359,9 @@ function M.rotate(x, y, direction)
   end
   local e = own_entity_at(x, y)
   if not e then return fail("no_entity", "no entity of yours at " .. x .. "," .. y) end
+  if e.type == "underground-belt" then
+    return fail("rotate_underground", "rotating an underground belt turns the entrance into an exit and breaks the pair", { entity = e.name })
+  end
   local target = DIRS[direction]
   if e.direction ~= target then
     if e.type == "assembling-machine" then

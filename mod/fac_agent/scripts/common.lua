@@ -203,11 +203,12 @@ function C.direction_name(e)
   return C.DIR_NAME[e.direction] or tostring(e.direction)
 end
 
-function C.try_place(name, pos, dir_name)
+-- ug_type: "input" or "output" for underground belts only (create_entity makes an input without it)
+function C.try_place(name, pos, dir_name, ug_type)
   local a = C.agent()
   local d = C.DIRS[dir_name or "north"]
   if not C.surf().can_place_entity { name = name, position = pos, direction = d, force = a.force } then return nil end
-  return C.surf().create_entity { name = name, position = pos, direction = d, force = a.force, raise_built = true }
+  return C.surf().create_entity { name = name, position = pos, direction = d, force = a.force, type = ug_type, raise_built = true }
 end
 
 function C.has_inventory_api(e)

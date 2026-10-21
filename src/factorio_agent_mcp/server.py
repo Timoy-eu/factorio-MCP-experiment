@@ -71,13 +71,13 @@ def run(action: Callable[[Game], str]) -> str:
 # Tools in the "core" profile: enough to play the early and mid game, few enough for small models.
 CORE_TOOLS = {
     "guide", "status", "look", "find", "gather", "craft", "build", "build_miner", "build_miners", "rotate", "fuel",
-    "collect", "insert", "extract", "set_recipe", "connect", "research", "map", "inspect", "can_place",
+    "collect", "insert", "extract", "set_recipe", "connect", "build_underground", "research", "map", "inspect", "can_place",
     "machine_stats", "overview", "goal", "notes", "say", "read_chat", "batch",
 }
 # Action tools get a one line state footer so the model rarely needs an extra status call.
 FOOTER_TOOLS = {
     "gather", "craft", "build", "build_miner", "build_miners", "rotate", "fuel", "collect", "insert", "extract",
-    "set_recipe", "connect", "build_next_to", "pickup", "move_entity", "move_to", "blueprint",
+    "set_recipe", "connect", "build_underground", "build_next_to", "pickup", "move_entity", "move_to", "blueprint",
 }
 REGISTRY: dict[str, Callable[..., str]] = {}
 _registered: list[str] = []
@@ -87,7 +87,8 @@ _in_batch = False
 NAME_ALIASES = {
     "furnace": "stone-furnace", "drill": "burner-mining-drill", "miner": "burner-mining-drill",
     "burner-drill": "burner-mining-drill", "electric-drill": "electric-mining-drill",
-    "belt": "transport-belt", "conveyor": "transport-belt", "pole": "small-electric-pole",
+    "belt": "transport-belt", "conveyor": "transport-belt", "underground": "underground-belt",
+    "tunnel": "underground-belt", "fast-underground": "fast-underground-belt", "express-underground": "express-underground-belt", "pole": "small-electric-pole",
     "chest": "wooden-chest", "assembler": "assembling-machine-1", "gear": "iron-gear-wheel",
     "gears": "iron-gear-wheel", "plate": "iron-plate", "iron-plates": "iron-plate", "copper-plates": "copper-plate",
     "pump": "offshore-pump", "engine": "steam-engine", "red-science": "automation-science-pack",
@@ -247,6 +248,12 @@ def build(entity: str, x: float, y: float, direction: str = "auto") -> str:
     """Place a building from your inventory. direction: auto (first that fits) or north/east/south/west; give belts and inserters an explicit one. A blocked spot moves to the nearest free one; the reply states the real position."""
     return run(lambda g: render.build_text(
         g.call("build", _name(entity), float(x), float(y), direction_name(direction), 2)))
+
+
+@tool("builds an underground belt pair from ({x1:g}, {y1:g}) to ({x2:g}, {y2:g})")
+def build_underground(x1: float, y1: float, x2: float, y2: float, entity: str = "underground-belt") -> str:
+    """Place an underground belt PAIR: entrance at (x1,y1), exit at (x2,y2), in the same row or column, at most 5 tiles apart (fast: 7, express: 9). Items travel from entrance to exit and the belt direction follows. Never use build or rotate for underground belts. Checked by the game."""
+    return run(lambda g: render.underground_text(g.call("build_underground", _name(entity), _num(x1), _num(y1), _num(x2), _num(y2))))
 
 
 @tool("rotates the building at ({x:g}, {y:g}) to {direction}")
@@ -598,7 +605,8 @@ def _bp_place(name: str, x: float, y: float, rotation: int = 0, dry_run: bool = 
         for e in ents:
             ax, ay = x + e["dx"] + sx, y + e["dy"] + sy
             try:
-                r = g.call("build", e["n"], ax, ay, e.get("d") or "north")
+                r = (g.call("build", e["n"], ax, ay, e.get("d") or "north", 0, e["u"]) if e.get("u")
+                     else g.call("build", e["n"], ax, ay, e.get("d") or "north"))
                 if r.get("moved"):
                     warnings.append(f"{e['n']} wanted ({ax:g},{ay:g}) got ({r['x']:g},{r['y']:g})")
                 if r.get("warning"):

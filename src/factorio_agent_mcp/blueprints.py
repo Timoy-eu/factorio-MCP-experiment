@@ -63,6 +63,8 @@ def from_snapshot(snapshot: dict[str, Any], x1: float, y1: float, x2: float, y2:
             item["d"] = e["d"]
         if e.get("r"):
             item["r"] = e["r"]
+        if e.get("u"):
+            item["u"] = e["u"]  # underground belt: "input" (entrance) or "output" (exit)
         entities.append(item)
     entities.sort(key=lambda it: (layer_of(it), it["dy"], it["dx"]))
     return {

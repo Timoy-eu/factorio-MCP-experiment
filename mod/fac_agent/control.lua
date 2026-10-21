@@ -10,6 +10,7 @@ local Basic = require("scripts.basic")
 local Extra = require("scripts.extra")
 local Connect = require("scripts.connect")
 local Rails = require("scripts.rails")
+local Underground = require("scripts.underground")
 local Map = require("scripts.map")
 local Track = require("scripts.track")
 local Selftest = require("scripts.selftest")
@@ -36,7 +37,7 @@ local api = {
   set_speed = Extra.set_speed, score = Extra.score, launch_rocket = Extra.launch_rocket,
   research_info = Extra.research_info, diagnose = Extra.diagnose, read_chat = Extra.read_chat, save_game = Extra.save_game,
   -- connections and world snapshot
-  connect = Connect.connect, rail_end = Rails.rail_end, snapshot = Map.snapshot,
+  connect = Connect.connect, rail_end = Rails.rail_end, build_underground = Underground.build_underground, snapshot = Map.snapshot,
   selftest = Selftest.run,
   -- item tracking
   belt_contents = Track.belt_contents, trace_start = Track.trace_start, trace_probe = Track.trace_probe, sample = Track.sample,
@@ -44,7 +45,7 @@ local api = {
 
 local wrapped = {}
 for name, fn in pairs(api) do wrapped[name] = safe(fn) end
-wrapped.version = function() return "0.3.0" end
+wrapped.version = function() return "0.3.1" end
 
 remote.add_interface("fac_agent", wrapped)
 

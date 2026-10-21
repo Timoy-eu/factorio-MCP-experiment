@@ -81,7 +81,7 @@ def _glyph(item: dict[str, Any]) -> tuple[str, str]:
     if etype == "transport-belt" or name.endswith("transport-belt") and "underground" not in name and "splitter" not in name:
         return ARROW.get(d or "", "b"), "belts"
     if etype == "underground-belt":
-        return "u", "belts"
+        return ("U" if item.get("u") == "output" else "u"), "belts"
     if etype == "splitter":
         return "Y", "belts"
     if etype in ("pipe",):
@@ -165,7 +165,7 @@ def render(snapshot: dict[str, Any], layers: str | None = None) -> str:
 
 def _meaning(ch: str, it: dict[str, Any]) -> str:
     return {"^": "belt north", ">": "belt east", "v": "belt south", "<": "belt west",
-            "u": "underground belt", "Y": "splitter", "=": "pipe", "p": "pipe-to-ground",
+            "u": "underground entrance", "U": "underground exit", "Y": "splitter", "=": "pipe", "p": "pipe-to-ground",
             "+": "electric pole", "|": "rail north-south", "-": "rail east-west", "/": "rail diagonal /",
             "\\": "rail diagonal \\", "!": "rail signal", "?": "chain signal", "Z": "train stop",
             "M": "locomotive", "w": "wagon"}.get(ch, it.get("n", ch))

@@ -73,6 +73,16 @@ def hint_for(err: GameError) -> str:
         return "list_entities or map to find the exact coordinates"
     if code == "bad_direction":
         return "direction must be north, east, south, west (or auto for build)"
+    if code == "use_build_underground":
+        return "build_underground x1 y1 x2 y2 places entrance and exit together (same row or column, at most 5 tiles apart)"
+    if code == "rotate_underground":
+        return "do not rotate underground belts: pick both up with pickup and place a new pair with build_underground"
+    if code == "not_in_line":
+        return "entrance and exit must share x (vertical) or y (horizontal); items flow from (x1,y1) to (x2,y2)"
+    if code == "too_far":
+        return f"use a distance of at most {data.get('max')} (count from entrance to exit), or use fast-underground-belt"
+    if code == "not_paired":
+        return "check the tiles in between with map and look for another underground belt; build_underground again with other coordinates"
     if code == "disconnected":
         return "inspect the piece, or lay the line in shorter parts (connect kind=rail with a waypoint)"
     if code == "no_path":
@@ -410,6 +420,12 @@ def rail_end_list_text(data: dict[str, Any]) -> str:
                      f"facing {dir16_name(e.get('end_direction'))} (direction={int(e.get('end_direction', 0))})")
     lines.append("continue with: connect kind=rail x1=<end x> y1=<end y> x2=<goal x> y2=<goal y>")
     return "\n".join(lines)
+
+
+def underground_text(data: dict[str, Any]) -> str:
+    a, b = as_map(data.get("entrance")), as_map(data.get("exit"))
+    return (f"placed {data.get('entity')} pair: entrance {at(a)} -> exit {at(b)}, facing {data.get('direction')}, "
+            f"{data.get('distance')} tiles apart, paired (checked by the game)")
 
 
 def connect_text(data: dict[str, Any]) -> str:

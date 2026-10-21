@@ -252,6 +252,22 @@ local function make_entity(name, etype, pos, dir, force)
         end
         return { inputs = ins, outputs = outs }
       end
+      if k == "neighbours" and d.type == "underground-belt" then
+        -- an input pairs with the nearest output in front of it (same direction, same line, up to the maximum distance)
+        local v = VEC[d.direction]
+        local sign = d.belt_to_ground_type == "input" and 1 or -1
+        local want = d.belt_to_ground_type == "input" and "output" or "input"
+        for step = 1, 5 do
+          for _, o in ipairs(world.entities) do
+            if o.valid and o.type == "underground-belt" and o ~= e and o.direction == d.direction and o.belt_to_ground_type == want
+              and math.floor(o.position.x) == math.floor(d.position.x + sign * v[1] * step)
+              and math.floor(o.position.y) == math.floor(d.position.y + sign * v[2] * step) then
+              return o
+            end
+          end
+        end
+        return nil
+      end
       if k == "electric_network_id" and d.type == "electric-pole" then
         local best = d.unit_number
         for _, o in ipairs(pole_component(e)) do best = math.min(best, o.unit_number) end
@@ -415,6 +431,7 @@ function surface.create_entity(args)
   local pos = args.position
   local etype = args.name == "character" and "character" or entity_type_for(args.name)
   local e, d = register(args.name, etype, pos, args.direction or 0, args.force and forces[force_name(args.force)] or forces.player)
+  if etype == "underground-belt" then d.belt_to_ground_type = args.type or "input" end
   if args.name == "character" then
     d.inventory = new_inventory()
     d.prototype = { crafting_categories = { crafting = true } }
@@ -509,6 +526,8 @@ for _, n in ipairs { "stone-furnace", "burner-mining-drill", "wooden-chest", "tr
     tile_width = SIZES[n] or 1, tile_height = SIZES[n] or 1,
   }
 end
+prototypes.entity["underground-belt"].type = "underground-belt"
+prototypes.entity["underground-belt"].max_underground_distance = 5
 prototypes.entity["small-electric-pole"].get_max_wire_distance = function() return WIRE_REACH end
 
 ----------------------------------------------------------------------------- remote / script

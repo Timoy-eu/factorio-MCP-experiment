@@ -215,7 +215,8 @@ def render(snapshot: dict[str, Any], scale: int = 16, grid: bool = True, title: 
             f'<rect x="{-s / 2:.1f}" y="{-s * 0.5:.1f}" width="{s}" height="{s * 0.14:.1f}" fill="#7a5e10"/>'
             f'<rect x="{-s / 2:.1f}" y="{s * 0.36:.1f}" width="{s}" height="{s * 0.14:.1f}" fill="#7a5e10"/>'
             f'<polyline points="{-s * 0.18:.1f},{-s * 0.24:.1f} {s * 0.12:.1f},0 {-s * 0.18:.1f},{s * 0.24:.1f}" fill="none" stroke="#5a430a" stroke-width="{max(1.5, s * 0.12):.1f}" stroke-linejoin="round"/>'
-            + (f'<circle r="{s * 0.16:.1f}" fill="#5a430a"/>' if b.get("t") == "underground-belt" else "") + '</g>')
+            + ((f'<circle r="{s * 0.2:.1f}" fill="none" stroke="#5a430a" stroke-width="{max(1.5, s * 0.1):.1f}"/>' if b.get("u") == "output"
+                else f'<circle r="{s * 0.16:.1f}" fill="#5a430a"/>') if b.get("t") == "underground-belt" else "") + '</g>')
 
     # machines
     for e in sorted(others, key=lambda it: -(float(it.get("w") or 1) * float(it.get("h") or 1))):

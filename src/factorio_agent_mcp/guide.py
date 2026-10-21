@@ -46,7 +46,7 @@ Use connect kind=pipe between them, then connect kind=power from the steam engin
 Check with inspect (electric network) and overview (no_power). no_power means: no pole close enough, no generator in the network, or the boiler has no fuel or water.""",
     "belts": """BELTS AND INSERTERS
 - connect kind=belt x1 y1 x2 y2 lays a routed belt; end_direction sets the facing of the last belt. Use dry_run=true first to count the belts.
-- Belts carry items in their arrow direction (map shows ^ > v <). Underground belts need pairs, avoid them early.
+- Belts carry items in their arrow direction (map shows ^ > v <). Underground belts are always a PAIR: use build_underground x1 y1 x2 y2 (entrance, exit, same row or column, at most 5 tiles apart, items flow from entrance to exit); never build or rotate a single piece. map shows the entrance as u and the exit as U.
 - Inserters move items from one side to the other (belt -> machine, machine -> belt or chest). Give them an explicit direction (auto just takes the first one that fits), then inspect: "outputs into ..." must name the target you want. If it names the wrong side, rotate to the opposite direction.
 - Verify every line: trace_item at its start. STUCK means blocked or nothing takes the items; "left the belt" at the expected place means success.
 - Mixed belts block. One belt = one item type, or one item per lane.""",
@@ -70,7 +70,7 @@ ORDER = ["method", "start", "tools", "belts", "rails", "power", "automation", "d
 
 TOOL_GROUPS = [
     ("Act", ["gather", "craft", "build", "build_next_to", "build_miner", "build_miners", "rotate", "move_entity", "move_to",
-             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "rail_end", "research", "launch_rocket",
+             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "build_underground", "rail_end", "research", "launch_rocket",
              "set_game_speed"]),
     ("See", ["status", "look", "find", "map", "inspect", "list_entities", "inventory", "resource_patch", "can_place",
              "nearest_buildable", "overview"]),
