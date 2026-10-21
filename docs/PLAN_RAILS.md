@@ -12,7 +12,7 @@ add stations and signals, and run a train, with the same reliability rules as th
 | 4 Display | done: ASCII layer `rails`, SVG with curves from the learned table, signals, stops, trains |
 | 1 Calibration | done: `tools/calibrate_rails.py` learns the table from the game (24 pieces, reproducible), `tools/gen_rail_table.py` makes `rail_table.lua` |
 | 2 Router | done, in Lua inside the mod (`scripts/rails.lua`) instead of Python: exact `can_place_entity`, no RCON round trips |
-| 3 Tools | partly: `connect kind=rail` and `rail_end` done; `build_station`, `build_signals`, `build_train`, `train_schedule` open |
+| 3 Tools | partly: `connect kind=rail` and `rail_end` done, a train ran 2 laps on a built loop (stations, schedule and loco placed by console, not yet by tools); `build_station`, `build_signals`, `build_train`, `train_schedule` open |
 | 5 Guide, planner, eval | guide topic `rails` done; planner and eval scenario S6 open |
 
 Deviations from the plan: the router lives in the mod, and it also removes trees and rocks in the way (cost per tree,
@@ -32,6 +32,20 @@ Deviations from the plan: the router lives in the mod, and it also removes trees
   straight piece can be followed by a half-diagonal one through a curve pair.
 - `can_place_entity` with `build_check_type.ghost_place` does not ignore trees, so trees are found with `find_entities_filtered`
   and cut one by one (`entity.mine{inventory=...}`).
+- Closed loop test (real game, 2026-10-21): four `connect kind=rail` legs formed a loop of 67 pieces (curves a and b, straights, half-diagonals).
+  The last leg ended exactly at the open end of the first piece (`goal` = that end, `end_direction` = the way the first piece continues).
+  Checks: no open rail end left, and walking `move_forward` from the first piece returns to it after 67 steps.
+- Trains: `train-stop` sits on the RIGHT side of the travel direction (east travel: stop south of the rail, facing east; west travel: north
+  of the rail, facing west). Find the spot by trying offsets and keep the one where `stop.connected_rail` is not nil.
+  `locomotive` created with the rail direction gets `orientation` 0.25 for east; `train.schedule = {current=1, records={{station=..., wait_conditions={{type="time", ticks=..., compare_type="and"}}}}}`
+  and `train.manual_mode = false` start it; fuel with `get_fuel_inventory().insert`.
+- A schedule with ONE station never leaves it (the next stop would be the same station). Two stations are needed for a lap.
+- `defines.train_state` in 2.0.77: on_the_path 0, no_schedule 1, no_path 2, arrive_signal 3, wait_signal 4, arrive_station 5, wait_station 6,
+  manual_control_stop 7, manual_control 8, destination_full 9. There is no `train.front_rail`; use `train.get_rails()`.
+- `loco.set_driver(character)` works for the agent character; the seated character no longer shows up in `find_entities_filtered{name="character"}`,
+  use `loco.get_driver()`. Result: 2.05 laps in 1782 ticks with 4 station stops, top speed 0.66 tiles/tick (143 km/h).
+- Bug found by this test and fixed (mod 0.3.3): when trees stood next to the line, `scan_box` counted our own neighbouring rails as blockers and the
+  piece failed with `blocked`. Rails of our force are harmless neighbours now.
 - Performance: a 150 tile line searches and builds in about 2 s, a 250 tile U-turn in about 5 s (the game is blocked meanwhile),
   a failed search up to about 5 s at the node limit (40000).
 

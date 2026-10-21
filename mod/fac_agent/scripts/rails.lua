@@ -223,8 +223,10 @@ local function piece_box(name, dir, x, y)
            { math.max(xs[1], xs[2], xs[3]) + 1.2, math.max(ys[1], ys[2], ys[3]) + 1.2 } }
 end
 
-local REMOVABLE = { "tree", "simple-entity" } -- rocks are simple entities
+-- entities that never stop a rail from being placed (ore, the player, dropped items, ghosts) or that are
+-- harmless neighbours: our own rails lie right next to the box of the next piece
 local NOT_BLOCKING = { resource = true, character = true, corpse = true, ["item-entity"] = true, ["entity-ghost"] = true, ["tile-ghost"] = true }
+for _, t in ipairs(RAIL_TYPES) do NOT_BLOCKING[t] = true end
 
 -- trees and rocks inside the box; second result: true when something else (building, cliff, water) is in the way
 local function scan_box(box)

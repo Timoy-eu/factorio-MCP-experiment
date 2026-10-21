@@ -261,7 +261,7 @@ function M.run(x, y)
 
   local summary = { ok = 0, fail = 0, skip = 0, warn = 0 }
   for _, r in ipairs(results) do summary[r.s] = (summary[r.s] or 0) + 1 end
-  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.2" }
+  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.3" }
 end
 
 return M
