@@ -73,6 +73,18 @@ def hint_for(err: GameError) -> str:
         return "list_entities or map to find the exact coordinates"
     if code == "bad_direction":
         return "direction must be north, east, south, west (or auto for build)"
+    if code == "no_rail":
+        return "map layers=rails shows the track; use a straight piece (| or -), not a curve, and x y close to it"
+    if code == "no_site":
+        return "try another piece of the same line with build_station, or the other travel direction"
+    if code == "bad_count":
+        return "build_train locomotives=1 wagons=2 (at most 12 cars in total)"
+    if code == "not_coupled":
+        return "the track must be straight for 7 tiles per car; try a longer straight part"
+    if code == "no_train":
+        return "build_train x y travel=east first, or use the coordinates of one of its cars"
+    if code == "no_station":
+        return "build_station name=... x=... y=... first; train_schedule needs the exact station names"
     if code == "use_build_underground":
         return "build_underground x1 y1 x2 y2 places entrance and exit together (same row or column, at most 5 tiles apart)"
     if code == "rotate_underground":
@@ -420,6 +432,44 @@ def rail_end_list_text(data: dict[str, Any]) -> str:
                      f"facing {dir16_name(e.get('end_direction'))} (direction={int(e.get('end_direction', 0))})")
     lines.append("continue with: connect kind=rail x1=<end x> y1=<end y> x2=<goal x> y2=<goal y>")
     return "\n".join(lines)
+
+
+def station_text(data: dict[str, Any]) -> str:
+    return (f"built train stop '{data.get('name')}' at ({num(data.get('x'))},{num(data.get('y'))}), facing {data.get('direction')}; "
+            f"{data.get('note') or ''}").rstrip("; ")
+
+
+def train_text(data: dict[str, Any]) -> str:
+    cars = f"{data.get('locomotives')} locomotive" + (f" + {data.get('wagons')} wagon" if data.get("wagons") else "")
+    text = (f"placed train {data.get('train_id')}: {cars} ({data.get('cars')} cars) with the front at "
+            f"({num(data.get('x'))},{num(data.get('y'))}), heading {data.get('direction')}; fuel {data.get('fuel')} {data.get('fuel_item')}")
+    if data.get("warning"):
+        text += f". WARNING: {data['warning']}"
+    return text + ". Next: train_schedule x y stations=\"A; B\""
+
+
+def schedule_text(data: dict[str, Any]) -> str:
+    stations = as_list(data.get("stations"))
+    route = " -> ".join(stations + ([stations[0]] if len(stations) > 1 else []))
+    text = f"train {data.get('train_id')} is automatic now: {route}, waits {num(data.get('wait'))} s at each stop (state {data.get('state')})"
+    if data.get("note"):
+        text += f". NOTE: {data['note']}"
+    return text
+
+
+def train_status_text(data: dict[str, Any]) -> str:
+    where = f" at station '{data['station']}'" if data.get("station") else ""
+    text = (f"train {data.get('train_id')}: {data.get('state')}{where}, {data.get('speed_kmh')} km/h, {data.get('cars')} cars "
+            f"({data.get('locomotives')} locomotive), fuel {data.get('fuel')}, front at ({num(data.get('x'))},{num(data.get('y'))})")
+    schedule = as_list(data.get("schedule"))
+    text += f", {'manual' if data.get('manual') else 'automatic'}"
+    if schedule:
+        text += f", schedule: {' -> '.join(schedule)}"
+    if data.get("driver"):
+        text += ", someone sits in it"
+    if data.get("fuel") == 0:
+        text += ". WARNING: no fuel, it will not move"
+    return text
 
 
 def underground_text(data: dict[str, Any]) -> str:

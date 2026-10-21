@@ -5,6 +5,7 @@ local Basic = require("scripts.basic")
 local Connect = require("scripts.connect")
 local Rails = require("scripts.rails")
 local Underground = require("scripts.underground")
+local Trains = require("scripts.trains")
 local Map = require("scripts.map")
 local M = {}
 
@@ -16,7 +17,7 @@ local SIZE = 14
 local GIVE = {
   ["transport-belt"] = 20, ["small-electric-pole"] = 8, ["stone-furnace"] = 3, ["wooden-chest"] = 3,
   ["assembling-machine-1"] = 1, ["inserter"] = 1, ["iron-plate"] = 6, ["offshore-pump"] = 1,
-  ["burner-mining-drill"] = 2, coal = 10, rail = 80, ["underground-belt"] = 2,
+  ["burner-mining-drill"] = 2, coal = 10, rail = 80, ["underground-belt"] = 2, ["train-stop"] = 1, locomotive = 1,
 }
 
 local function good(s) return type(s) == "string" and s:find('"ok":true', 1, true) ~= nil end
@@ -235,6 +236,21 @@ function M.run(x, y)
     return "ok", "rail line routed, verified by the game, open end found and continued"
   end)
 
+  check("train", function()
+    if not defines.train_state then return "skip", "this Factorio has no train API" end
+    local r = Connect.connect("rail", ox + 1, oy + 1, ox + 13, oy + 1, nil, "east", false, true)
+    if not good(r) then return "skip", "no rail line to test with: " .. tostring(r):sub(1, 120) end
+    local st = Trains.build_station("Selftest", ox + 5, oy + 1, "east")
+    if not good(st) then return "fail", "station failed: " .. tostring(st):sub(1, 200) end
+    local tr = Trains.build_train(ox + 9, oy + 1, "east", 1, 0, nil, "coal", 3)
+    if not good(tr) then return "fail", "train failed: " .. tostring(tr):sub(1, 200) end
+    local sc = Trains.train_schedule(ox + 9, oy + 1, "Selftest", 1)
+    if not good(sc) then return "fail", "schedule failed: " .. tostring(sc):sub(1, 200) end
+    local status = Trains.train_status(ox + 9, oy + 1)
+    if not (good(status) and status:find('"train_id"', 1, true)) then return "fail", "train_status failed: " .. tostring(status):sub(1, 200) end
+    return "ok", "station, locomotive, schedule and status work"
+  end)
+
   check("chat_event", function()
     local ok1 = defines.events and defines.events.on_console_chat ~= nil
     local ok2 = type(game.get_player) == "function"
@@ -261,7 +277,7 @@ function M.run(x, y)
 
   local summary = { ok = 0, fail = 0, skip = 0, warn = 0 }
   for _, r in ipairs(results) do summary[r.s] = (summary[r.s] or 0) + 1 end
-  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.3.3" }
+  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.4.0" }
 end
 
 return M

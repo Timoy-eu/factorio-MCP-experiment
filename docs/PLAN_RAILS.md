@@ -12,7 +12,7 @@ add stations and signals, and run a train, with the same reliability rules as th
 | 4 Display | done: ASCII layer `rails`, SVG with curves from the learned table, signals, stops, trains |
 | 1 Calibration | done: `tools/calibrate_rails.py` learns the table from the game (24 pieces, reproducible), `tools/gen_rail_table.py` makes `rail_table.lua` |
 | 2 Router | done, in Lua inside the mod (`scripts/rails.lua`) instead of Python: exact `can_place_entity`, no RCON round trips |
-| 3 Tools | partly: `connect kind=rail` and `rail_end` done, a train ran 2 laps on a built loop (stations, schedule and loco placed by console, not yet by tools); `build_station`, `build_signals`, `build_train`, `train_schedule` open |
+| 3 Tools | `connect kind=rail`, `rail_end`, `build_station`, `build_train`, `train_schedule`, `train_status` done and verified on a real loop (2 laps by tools in 33 s); `build_signals` open |
 | 5 Guide, planner, eval | guide topic `rails` done; planner and eval scenario S6 open |
 
 Deviations from the plan: the router lives in the mod, and it also removes trees and rocks in the way (cost per tree,

@@ -77,7 +77,7 @@ CORE_TOOLS = {
 # Action tools get a one line state footer so the model rarely needs an extra status call.
 FOOTER_TOOLS = {
     "gather", "craft", "build", "build_miner", "build_miners", "rotate", "fuel", "collect", "insert", "extract",
-    "set_recipe", "connect", "build_underground", "build_next_to", "pickup", "move_entity", "move_to", "blueprint",
+    "set_recipe", "connect", "build_underground", "build_station", "build_train", "train_schedule", "build_next_to", "pickup", "move_entity", "move_to", "blueprint",
 }
 REGISTRY: dict[str, Callable[..., str]] = {}
 _registered: list[str] = []
@@ -205,7 +205,7 @@ def apply_profile(profile: str | None = None) -> list[str]:
 
 @tool()
 def guide(topic: str = "") -> str:
-    """How to play. topic: method, start, tools, belts, rails, power, automation, debugging, or empty for all. Read once at the start."""
+    """How to play. topic: method, start, tools, belts, rails, trains, power, automation, debugging, or empty for all. Read once at the start."""
     return guide_module.text(topic, set(_registered) or None)
 
 
@@ -254,6 +254,33 @@ def build(entity: str, x: float, y: float, direction: str = "auto") -> str:
 def build_underground(x1: float, y1: float, x2: float, y2: float, entity: str = "underground-belt") -> str:
     """Place an underground belt PAIR: entrance at (x1,y1), exit at (x2,y2), in the same row or column, at most 5 tiles apart (fast: 7, express: 9). Items travel from entrance to exit and the belt direction follows. Never use build or rotate for underground belts. Checked by the game."""
     return run(lambda g: render.underground_text(g.call("build_underground", _name(entity), _num(x1), _num(y1), _num(x2), _num(y2))))
+
+
+@tool("builds the train stop {name} at ({x:g}, {y:g})")
+def build_station(name: str, x: float, y: float, travel: str = "auto") -> str:
+    """Place a train stop (station) beside a straight rail near (x,y) and name it. It stands on the right side of the travel direction; trains travelling that way (travel: north/east/south/west, auto = either way along the rail) stop there. Needs a train-stop item."""
+    direction = None if travel.strip().lower() in ("", "auto") else direction_name(travel)
+    return run(lambda g: render.station_text(g.call("build_station", name.strip(), _num(x), _num(y), direction)))
+
+
+@tool("builds a train at ({x:g}, {y:g}) heading {travel}")
+def build_train(x: float, y: float, travel: str, locomotives: int = 1, wagons: int = 0, wagon: str = "cargo-wagon",
+                fuel: str = "coal", fuel_count: int = 20) -> str:
+    """Place a train on straight rail near (x,y): the front locomotive at (x,y), then more locomotives and wagons behind it, every car 7 tiles long. travel: the direction it faces (north/east/south/west). Takes the cars and the fuel from your inventory. Needs 7 tiles of straight track per car."""
+    return run(lambda g: render.train_text(g.call("build_train", _num(x), _num(y), direction_name(travel), int(locomotives), int(wagons),
+                                                  _name(wagon), _name(fuel), int(fuel_count))))
+
+
+@tool("sets the schedule of the train at ({x:g}, {y:g}) to {stations}")
+def train_schedule(x: float, y: float, stations: str, wait: float = 5) -> str:
+    """Send the train at (x,y) to the named stations in turn, forever, and switch it to automatic. stations: names separated by ; (for a lap you need two or more). wait: seconds at each stop."""
+    return run(lambda g: render.schedule_text(g.call("train_schedule", _num(x), _num(y), stations, float(wait))))
+
+
+@tool()
+def train_status(x: float, y: float) -> str:
+    """State of the train at (x,y): moving or waiting, speed, current station, schedule, fuel and whether someone sits in it. Use it to check that a train really runs."""
+    return run(lambda g: render.train_status_text(g.call("train_status", _num(x), _num(y))))
 
 
 @tool("rotates the building at ({x:g}, {y:g}) to {direction}")

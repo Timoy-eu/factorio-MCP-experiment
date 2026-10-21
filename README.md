@@ -23,7 +23,7 @@ Step by step with OpenCode on Linux: **`INSTALL_OPENCODE.md`** (with examples in
 
 Short version:
 
-1. Install the mod: put `dist/fac_agent_0.3.3.zip` into the Factorio `mods/` folder
+1. Install the mod: put `dist/fac_agent_0.4.0.zip` into the Factorio `mods/` folder
    (or copy the folder `mod/fac_agent`). The mod requires Factorio 2.0.
 2. Start a server with RCON:
    `factorio --start-server my-map.zip --rcon-port 27015 --rcon-password secret`
@@ -83,6 +83,10 @@ The raw `run_lua` tool is included. Its description tells the model to use it on
 | `move_to` | go to a position | `move_to` |
 | `connect` | lay belts, pipes, power poles or **rails** (A* around obstacles), `dry_run` counts the pieces. `kind=rail` routes straight, diagonal and curved pieces, continues an open rail end, removes trees in the way (`keep_trees=true` avoids that) and lets the game verify the connection | `connect_entities`, `get_connection_amount` |
 | `build_underground` | place an underground belt pair (entrance, exit, same row or column, at most 5 tiles apart); both pieces get the right `input`/`output` type and the game confirms the pairing. `build` and `rotate` refuse single underground pieces | |
+| `build_station` | place a train stop beside a straight rail piece, on the right side of the travel direction, and name it | |
+| `build_train` | place a train (locomotives first, then wagons, 7 tiles per car) on straight track; cars and fuel come from the inventory | |
+| `train_schedule` | send the train at x,y to named stations in turn and switch it to automatic (one station: it stays there, a lap needs two) | |
+| `train_status` | state, speed, current station, schedule, fuel of a train; proves that it really runs | |
 | `rail_end` | open rail ends near a point: where a line stops and which way it points (start of the next `connect kind=rail`) | |
 | `research_info` | progress and missing science packs | `get_research_progress` |
 | `score` | production statistics | `score` |

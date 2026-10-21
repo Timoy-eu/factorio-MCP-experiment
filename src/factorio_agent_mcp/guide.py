@@ -40,6 +40,14 @@ TOPICS = {
 - The game checks the connection itself. On failure everything placed is picked up again and the reply names the piece.
 - Very long lines (more than about 150 tiles) or a U-turn can reach the search limit: lay them in parts via a waypoint.
 - map shows rails as | - / \\ , signals ! ?, train stops Z, locomotives M, wagons w. map layers=rails shows only them.""",
+    "trains": """TRAINS
+Order: 1) lay the track (guide topic=rails)  2) build_station twice  3) build_train  4) train_schedule  5) train_status to check.
+- build_station name=Mine x y travel=east: a train stop beside a STRAIGHT rail piece, on the right side of the travel direction. A train stops there when it travels that way. Build one per end of the line.
+- build_train x y travel=east locomotives=1 wagons=2: the front locomotive at x y, the rest behind it (7 tiles per car, so you need that much straight track behind x y). Cars and fuel come from your inventory (craft locomotive, cargo-wagon, train-stop first). Put it on a straight piece of the loop.
+- train_schedule x y stations="Mine; Smelter" wait=5: automatic mode, the train visits the stops in turn forever. ONE station only: the train goes there and stays. A round trip needs two.
+- Check with train_status x y: state on_the_path = driving, wait_station = standing at a stop, no_path = the rails between the stops are not connected, no fuel = it will not move.
+- Loop and stops: the track must be connected in the direction of travel (a loop, or a line with room to turn). A dead-end line only works if the train can reverse; start with a closed loop.
+- map layers=rails shows track, stops Z, locomotives M and wagons w.""",
     "power": """POWER
 Chain: offshore-pump (on the water shore) -> pipe -> boiler (needs fuel) -> pipe -> steam-engine. 1 offshore pump supplies 20 boilers, 1 boiler feeds 2 steam engines (900 kW each).
 Use connect kind=pipe between them, then connect kind=power from the steam engine to the consumers. small-electric-pole: wires reach 7.5 tiles, but it only powers machines in the 5x5 area around it.
@@ -65,16 +73,16 @@ Check with inspect (electric network) and overview (no_power). no_power means: n
 - Enemies near (look shows them): move away or defend; a gun-turret needs ammo (insert firearm-magazine).""",
 }
 
-ORDER = ["method", "start", "tools", "belts", "rails", "power", "automation", "debugging"]
+ORDER = ["method", "start", "tools", "belts", "rails", "trains", "power", "automation", "debugging"]
 
 
 TOOL_GROUPS = [
     ("Act", ["gather", "craft", "build", "build_next_to", "build_miner", "build_miners", "rotate", "move_entity", "move_to",
-             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "build_underground", "rail_end", "research", "launch_rocket",
+             "pickup", "insert", "extract", "fuel", "collect", "set_recipe", "connect", "build_underground", "build_station", "build_train", "train_schedule", "rail_end", "research", "launch_rocket",
              "set_game_speed"]),
     ("See", ["status", "look", "find", "map", "inspect", "list_entities", "inventory", "resource_patch", "can_place",
              "nearest_buildable", "overview"]),
-    ("Measure", ["belt_contents", "trace_item", "measure_flow", "machine_stats", "score", "research_info"]),
+    ("Measure", ["belt_contents", "trace_item", "measure_flow", "machine_stats", "train_status", "score", "research_info"]),
     ("Combine", ["batch"]),
     ("Talk", ["say", "read_chat"]),
     ("Plan and remember", ["goal", "notes", "blueprint", "checkpoint"]),
