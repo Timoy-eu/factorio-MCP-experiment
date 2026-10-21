@@ -231,13 +231,23 @@ function M.run(x, y)
     if not r:find('"connected":true', 1, true) then return "fail", "rails placed but not connected: " .. tostring(r):sub(1, 160) end
     local ends = Rails.rail_end(ox + 12, oy + 8, 6)
     if not (good(ends) and ends:find('"end_direction"', 1, true)) then return "fail", "rail_end found no open end: " .. tostring(ends):sub(1, 160) end
-    local r2 = Connect.connect("rail", ox + 12, oy + 8, ox + 2, oy + 12, nil, nil, false, true)
+    -- continue straight on for 8 tiles in the direction the first line ended (a U-turn does not fit into the sandbox)
+    local first = helpers.json_to_table(r)
+    local to = first and first.to
+    if not to then return "warn", "no end position reported" end
+    local angle = ((to.direction or 0) % 16) * math.pi / 8
+    local gx, gy = to.x + 8 * math.sin(angle), to.y - 8 * math.cos(angle)
+    local r2 = Connect.connect("rail", to.x, to.y, gx, gy, nil, nil, false, true)
     if not good(r2) then return "warn", "first line ok, continuing it failed: " .. tostring(r2):sub(1, 160) end
     return "ok", "rail line routed, verified by the game, open end found and continued"
   end)
 
   check("train", function()
     if not defines.train_state then return "skip", "this Factorio has no train API" end
+    for _, e in ipairs(s.find_entities_filtered { area = { { ox - 6, oy - 6 }, { ox + SIZE + 10, oy + SIZE + 10 } }, force = a.force,
+        type = { "straight-rail", "half-diagonal-rail", "curved-rail-a", "curved-rail-b" } }) do
+      if e.valid then e.destroy() end
+    end
     local r = Connect.connect("rail", ox + 1, oy + 1, ox + 13, oy + 1, nil, "east", false, true)
     if not good(r) then return "skip", "no rail line to test with: " .. tostring(r):sub(1, 120) end
     local st = Trains.build_station("Selftest", ox + 5, oy + 1, "east")
@@ -277,7 +287,7 @@ function M.run(x, y)
 
   local summary = { ok = 0, fail = 0, skip = 0, warn = 0 }
   for _, r in ipairs(results) do summary[r.s] = (summary[r.s] or 0) + 1 end
-  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.4.0" }
+  return done { area = { x = ox, y = oy, size = SIZE }, results = results, summary = summary, version = "0.4.1" }
 end
 
 return M

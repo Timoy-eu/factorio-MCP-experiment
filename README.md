@@ -23,7 +23,7 @@ Step by step with OpenCode on Linux: **`INSTALL_OPENCODE.md`** (with examples in
 
 Short version:
 
-1. Install the mod: put `dist/fac_agent_0.4.0.zip` into the Factorio `mods/` folder
+1. Install the mod: put `dist/fac_agent_0.4.1.zip` into the Factorio `mods/` folder
    (or copy the folder `mod/fac_agent`). The mod requires Factorio 2.0.
 2. Start a server with RCON:
    `factorio --start-server my-map.zip --rcon-port 27015 --rcon-password secret`
